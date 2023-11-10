@@ -19,7 +19,7 @@ const help = `
  *     ensuring it contains a header that LIT can parse, considering the possibility that it needs to be run
  *     Then, it opens these two files in their default editor.
  *   - If it's a language server tests, it adds the code as a first test to
- *     \`DafnyLanguageServer.Text/Synchronization/DiagnosticsTest.cs\` and 
+ *     \`DafnyLanguageServer.Text/Diagnostics/DiagnosticsTest.cs\` and 
  *     creates commented placeholders for the interaction and expected results.
  * - It creates a branch named \`fix-<issueNumber>-<issueKeyword>\`, and commits the files there immediately
  * - It provides you with information to debug the issue in Rider, in CLI dotnet, or just run Dafny.
@@ -78,6 +78,8 @@ const TEST_TYPE = {
   LANGUAGE_SERVER_ICONS: 3,
   FORMATTER: 4
 }
+
+const TEST_FOLDER = "Source/IntegrationTests/TestFiles/LitTests/LitTest/";
 
 const ABORTED = "ABORTED";
 const ACCEPT_HINT = "(ENTER or y for yes, n for no, CTRL+C to abort)\n> ";
@@ -377,7 +379,7 @@ async function interactivelyCreateTestFileContent(issueNumber = null, commandLin
   var shouldCompile = test_type == TEST_TYPE.INTEGRATION && ok(await question("Will the test need to be compiled? "+ACCEPT_HINT));
   var shouldRun = shouldCompile && (hasMain || ok(await question("Will the test need to be run (i.e. will have a Main() method)? "+ACCEPT_HINT)));
   if(shouldCompile) {
-    console.log("All backends are going to be tested. If you want to modify the output of a particular backend or ignore one, please check Test/README.md.");
+    console.log("All backends are going to be tested. If you want to modify the output of a particular backend or ignore one, please check "+TEST_FOLDER+"README.md.");
   }
 
   programReproducingError = programReproducingError == "" ?
@@ -671,7 +673,7 @@ function getIntegrationTestManager(issueNumber, issueKeyword, suffix = "") {
       if(this.addedTestCases != null) {
         // Remove DisplayName~ from the added test cases
         for(var testCase of this.addedTestCases) {
-          openAndYield("Test/"+testCase);
+          openAndYield(TEST_FOLDER+testCase);
         }
       }
 
@@ -683,7 +685,7 @@ function getIntegrationTestManager(issueNumber, issueKeyword, suffix = "") {
       var testFile = this.name;
       if(testFile == null || !fs.existsSync(this.name)) {
         // Take the first file from additional
-        testFile = "Test/"+this.addedTestCases[0];
+        testFile = TEST_FOLDER+this.addedTestCases[0];
       }
       var programArguments = await getTestArguments(testFile);
       var issueNumber = this.issueNumber;
@@ -727,11 +729,11 @@ function getIntegrationTestManager(issueNumber, issueKeyword, suffix = "") {
     // Adds one more existing test to the branch by adding it in an empty commit.
     async addExisting(issueHint) {
       var testName = issueHint;
-      // List all the files in Test/ that contain "testName", which might contain a directory separator
-      var testFiles = await execLog(`find Test/ -name "*.dfy"`, "Listing all the test files that contain "+testName);
+      // List all the files in TEST_FOLDER that contain "testName", which might contain a directory separator
+      var testFiles = await execLog(`find ${TEST_FOLDER} -name "*.dfy"`, "Listing all the test files that contain "+testName);
       testFiles = testFiles.stdout.split("\n").map(file => file.trim());
-      // Remove "Test/" from the prefix of each file
-      testFiles = testFiles.map(file => file.substring(5));
+      // Remove TEST_FOLDER from the prefix of each file
+      testFiles = testFiles.map(file => file.substring(TEST_FOLDER.length));
       var testFile = testFiles.filter(file => file.indexOf(testName) >= 0);
       if(testFile.length == 0) {
         //console.log("Could not find the test file for "+testName);
@@ -770,7 +772,7 @@ ${content.replace(/"/g,"\"\"")}".TrimStart();
     }
     
     `;
-  return getLanguageServerManager("Synchronization/DiagnosticsTest.cs", testTemplate, issueNumber, issueKeyword, name);
+  return getLanguageServerManager("Diagnostics/DiagnosticsTest.cs", testTemplate, issueNumber, issueKeyword, name);
 }
 
 function getLanguageServerGutterIconsManager(issueNumber, issueKeyword, name = "") {
@@ -1111,7 +1113,7 @@ function FindAppropriateSuffix(fileContent, baseName) {
 }
 
 function getIntegrationTestFileName(issueNumber, suffix = "") {
-  return `Test/git-issues/git-issue-${issueNumber}${suffix}.dfy`;
+  return `${TEST_FOLDER}git-issues/git-issue-${issueNumber}${suffix}.dfy`;
 }
 function getIntegrationTestFileExpectName(issueNumber, suffix = "") {
   return getIntegrationTestFileName(issueNumber, suffix)+".expect";
@@ -1139,7 +1141,7 @@ async function doAddExistingOrNewTest(testManagers, moreText) {
 }
 
 // We will want to run tests on the language server at some point
-// (DafnyLanguageServer/Synchronization/DiagnosticsTest.cs).
+// (DafnyLanguageServer/Diagnostics/DiagnosticsTest.cs).
 
 // The main function
 async function Main() {
