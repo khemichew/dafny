@@ -1,4 +1,6 @@
+
 // Test module
+mod experimental;
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -45,10 +47,10 @@ mod tests {
 
     #[test]
     fn test_dafny_sequence_print() {
-        let hello = seq![
+        let hello: DafnyString = seq![
             DafnyChar('H'), DafnyChar('e'), DafnyChar('l'), DafnyChar('l'), DafnyChar('o')];
         assert_eq!(DafnyPrintWrapper(&hello).to_string(), "Hello");
-        let hello = seq![
+        let hello: DafnyStringUTF16 = seq![
             DafnyCharUTF16(0x0048), DafnyCharUTF16(0x0065), DafnyCharUTF16(0x006c), DafnyCharUTF16(0x006c), DafnyCharUTF16(0x006f)
         ];
         assert_eq!(DafnyPrintWrapper(&hello).to_string(), "Hello");

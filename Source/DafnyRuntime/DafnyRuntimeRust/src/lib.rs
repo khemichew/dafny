@@ -1372,6 +1372,7 @@ pub fn deallocate<T : ?Sized>(pointer: *const T) {
 // Define the AsAny trait
 pub trait AsAny {
   fn as_any(&self) -> &dyn Any;
+  fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 pub fn is_instance_of<C: ?Sized + AsAny, U: 'static>(theobject: *const C) -> bool {
     unsafe { &*theobject }.as_any().downcast_ref::<U>().is_some()
@@ -1607,6 +1608,8 @@ impl DafnyPrint for () {
 
 #[derive(Clone)]
 pub struct DafnyCharUTF16(pub u16);
+pub type DafnyStringUTF16 = Sequence<DafnyCharUTF16>;
+
 impl DafnyType for DafnyCharUTF16 {}
 impl DafnyTypeEq for DafnyCharUTF16 {}
 
@@ -1664,6 +1667,7 @@ impl PartialOrd<DafnyCharUTF16> for DafnyCharUTF16 {
 
 #[derive(Clone)]
 pub struct DafnyChar(pub char);
+pub type DafnyString = Sequence<DafnyChar>;
 
 impl DafnyType for DafnyChar {}
 impl DafnyTypeEq for DafnyChar {}
@@ -1862,7 +1866,7 @@ pub fn char_lt(left: char, right: char) -> bool {
     left_code < right_code
 }
 
-pub fn string_of(s: &str) -> Sequence<DafnyChar> {
+pub fn string_of(s: &str) -> DafnyString {
     s.chars().map(|v| DafnyChar(v)).collect::<Sequence<DafnyChar>>()
 }
 

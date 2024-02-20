@@ -50,22 +50,24 @@ module {:extern "DAST"} DAST {
     | U8 | I8 | U16 | I16 | U32 | I32 | U64 | I64 | U128 | I128 | BigInt
     | NoRange
 
+  datatype Attribute = Attribute(name: string, args: seq<string>)
+
   datatype ResolvedType =
-    | Datatype(path: seq<Ident>)
-    | Trait(path: seq<Ident>)
-    | Newtype(baseType: Type, range: NewtypeRange, erase: bool)
+    | Datatype(path: seq<Ident>, attributes: seq<Attribute>)
+    | Trait(path: seq<Ident>, attributes: seq<Attribute>)
+    | Newtype(baseType: Type, range: NewtypeRange, erase: bool, attributes: seq<Attribute>)
 
   datatype Ident = Ident(id: string)
 
-  datatype Class = Class(name: string, enclosingModule: Ident, typeParams: seq<Type>, superClasses: seq<Type>, fields: seq<Field>, body: seq<ClassItem>)
+  datatype Class = Class(name: string, enclosingModule: Ident, typeParams: seq<Type>, superClasses: seq<Type>, fields: seq<Field>, body: seq<ClassItem>, attributes: seq<Attribute>)
 
-  datatype Trait = Trait(name: string, typeParams: seq<Type>, body: seq<ClassItem>)
+  datatype Trait = Trait(name: string, typeParams: seq<Type>, body: seq<ClassItem>, attributes: seq<Attribute>)
 
-  datatype Datatype = Datatype(name: string, enclosingModule: Ident, typeParams: seq<Type>, ctors: seq<DatatypeCtor>, body: seq<ClassItem>, isCo: bool)
+  datatype Datatype = Datatype(name: string, enclosingModule: Ident, typeParams: seq<Type>, ctors: seq<DatatypeCtor>, body: seq<ClassItem>, isCo: bool, attributes: seq<Attribute>)
 
   datatype DatatypeCtor = DatatypeCtor(name: string, args: seq<Formal>, hasAnyArgs: bool /* includes ghost */)
 
-  datatype Newtype = Newtype(name: string, typeParams: seq<Type>, base: Type, range: NewtypeRange, witnessStmts: seq<Statement>, witnessExpr: Option<Expression>)
+  datatype Newtype = Newtype(name: string, typeParams: seq<Type>, base: Type, range: NewtypeRange, witnessStmts: seq<Statement>, witnessExpr: Option<Expression>, attributes: seq<Attribute>)
 
   datatype ClassItem = Method(Method)
 

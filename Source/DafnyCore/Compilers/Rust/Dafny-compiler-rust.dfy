@@ -189,10 +189,10 @@ module RAST
     TypeApp(std_type.MSel("vec").MSel("Vec"), [underlying])
   }
   function NewVec(elements: seq<Expr>): Expr {
-    Call(Identifier("vec!"), [], elements)
+    Identifier("vec!").Apply(elements)
   }
   function Clone(underlying: Expr): Expr {
-    Call(Select(underlying, "clone"), [], [])
+    Select(underlying, "clone").Apply([])
   }
   function Borrow(underlying: Expr): Expr {
     UnaryOp("&", underlying, UnOpFormat.NoFormat)
@@ -446,26 +446,27 @@ module RAST
     | Match(matchee: Expr, cases: seq<MatchCase>)
     | StmtExpr(stmt: Expr, rhs: Expr)
     | Block(underlying: Expr)
-    | StructBuild(name: string, assignments: seq<AssignIdentifier>)
+    | StructBuild(underlying: Expr, assignments: seq<AssignIdentifier>)
     | Tuple(arguments: seq<Expr>)
     | UnaryOp(op1: string, underlying: Expr, format: Format.UnOpFormat)
     | BinaryOp(op2: string, left: Expr, right: Expr, format2: Format.BinOpFormat)
-    | TypeAscription(left: Expr, tpe: Type)
+    | TypeAscription(left: Expr, tpe: Type)          // underlying as tpe
     | LiteralInt(value: string)
     | LiteralString(value: string, binary: bool)
-    | ConversionNum(tpe: Type, underlying: Expr)
-    | DeclareVar(declareType: DeclareType, name: string, optType: Option<Type>, optRhs: Option<Expr>)
-    | AssignVar(name: string, rhs: Expr)
-    | IfExpr(cond: Expr, thn: Expr, els: Expr)
-    | Loop(optCond: Option<Expr>, underlying: Expr)
-    | For(name: string, range: Expr, body: Expr)
-    | Labelled(lbl: string, underlying: Expr)
-    | Break(optLbl: Option<string>)
-    | Continue(optLbl: Option<string>)
-    | Return(optExpr: Option<Expr>)
-    | Call(obj: Expr, typeParameters: seq<Type>, arguments: seq<Expr>)
-    | Select(obj: Expr, name: string)
-    | MemberSelect(obj: Expr, name: string)
+    | ConversionNum(tpe: Type, underlying: Expr)     // underlying.convert_to(tpe)
+    | DeclareVar(declareType: DeclareType, name: string, optType: Option<Type>, optRhs: Option<Expr>) // let mut name: optType = optRhs;
+    | AssignVar(name: string, rhs: Expr)             // name = rhs;
+    | IfExpr(cond: Expr, thn: Expr, els: Expr)       // if cond { thn } else { els }
+    | Loop(optCond: Option<Expr>, underlying: Expr)  // loop { body }
+    | For(name: string, range: Expr, body: Expr)     // for name in range { body }
+    | Labelled(lbl: string, underlying: Expr)        // label lbl { expr }
+    | Break(optLbl: Option<string>)                  // break lbl;
+    | Continue(optLbl: Option<string>)               // continue optLabel;
+    | Return(optExpr: Option<Expr>)                  // return optExpr;
+    | CallType(obj: Expr, typeParameters: seq<Type>) // obj::<...type parameters>
+    | Call(obj: Expr, arguments: seq<Expr>)          // obj(...arguments)
+    | Select(obj: Expr, name: string)                // obj.name
+    | MemberSelect(obj: Expr, name: string)          // obj::name
   {
     predicate NoExtraSemicolonAfter() {
       DeclareVar? || AssignVar? || Break? || Continue? || Return? || 
@@ -490,7 +491,8 @@ module RAST
           }
         case Select(underlying, name) => PrecedenceAssociativity(2, LeftToRight)
         case MemberSelect(underlying, name) => PrecedenceAssociativity(2, LeftToRight)
-        case Call(_, _, _) => PrecedenceAssociativity(2, LeftToRight)
+        case CallType(_, _) => PrecedenceAssociativity(2, LeftToRight)
+        case Call(_, _) => PrecedenceAssociativity(2, LeftToRight)
         case TypeAscription(left, tpe) =>
           PrecedenceAssociativity(10, LeftToRight)
         case BinaryOp(op2, left, right, format) =>
@@ -536,9 +538,9 @@ module RAST
         case Block(underlying) =>
           1 + underlying.Height()
         case StructBuild(name, assignments) =>
-          1 + SeqToHeight(assignments, (assignment: AssignIdentifier)
+          1 + max(name.Height(), SeqToHeight(assignments, (assignment: AssignIdentifier)
                           requires assignment < this
-                          => assignment.Height())
+                          => assignment.Height()))
         case Tuple(arguments) =>
           1 + SeqToHeight(arguments, (argument: Expr)
                           requires argument < this
@@ -567,10 +569,12 @@ module RAST
           1 + max(range.Height(), body.Height())
         case Return(optExpr) =>
           if optExpr.Some? then 1 + optExpr.value.Height() else 1
-        case Call(obj, tpes, args) =>
+        case CallType(obj, tpes) =>
           1 + max(obj.Height(),
-                max(SeqToHeight(tpes, (tpe: Type) requires tpe < this => 1),
-                  SeqToHeight(args, (arg: Expr) requires arg < this => arg.Height())))
+                SeqToHeight(tpes, (tpe: Type) requires tpe < this => 1))
+        case Call(obj, args) =>
+          1 + max(obj.Height(),
+                  SeqToHeight(args, (arg: Expr) requires arg < this => arg.Height()))
         case Select(expression, name) =>
           1 + expression.Height()
         case MemberSelect(expression, name) =>
@@ -587,10 +591,10 @@ module RAST
       ensures this == r || r.Height() < this.Height()
     {
       match this {
-        case UnaryOp("&", Call(Select(underlying, "clone"), typeArgs, args), format) =>
-          if typeArgs == [] && args == [] then
+        case UnaryOp("&", Call(Select(underlying, "clone"), args), format) =>
+          if args == [] then
             assert Select(underlying, "clone").Height() == 1 + underlying.Height();
-            assert Call(Select(underlying, "clone"), typeArgs, args).Height() == 2 + underlying.Height();
+            assert Call(Select(underlying, "clone"), args).Height() == 2 + underlying.Height();
             assert UnaryOp("&", underlying, format).Height() == 1 + underlying.Height();
             UnaryOp("&", underlying, format)
           else
@@ -620,8 +624,8 @@ module RAST
             match expr {
               case Call(MemberSelect(
                 MemberSelect(MemberSelect(
-                Identifier(""), "dafny_runtime"), "DafnyInt"), "from"), tpe, args) =>
-                if |tpe| == 0 && |args| == 1 then
+                Identifier(""), "dafny_runtime"), "DafnyInt"), "from"), args) =>
+                if |args| == 1 then
                   match args[0] {
                     case LiteralInt(number) => LiteralInt("/*optimized*/"+number)
                     case LiteralString(number, _) => LiteralInt("/*optimized*/"+number)
@@ -709,7 +713,7 @@ module RAST
           "if " + cond.ToString(ind + IND) + " {\n" + ind + IND + thn.ToString(ind + IND) +
           "\n" + ind + "} else {\n" + ind + IND + els.ToString(ind + IND) + "\n" + ind + "}"
         case StructBuild(name, assignments) =>
-          name + " {" +
+          name.ToString(ind) + " {" +
           SeqToString(assignments, (assignment: AssignIdentifier)
                       requires assignment.Height() < this.Height()
                       =>
@@ -781,7 +785,13 @@ module RAST
           body.ToString(ind + IND) + "\n" + ind + "}"
         case Return(optExpr) =>
           "return" + (if optExpr.Some? then " " + optExpr.value.ToString(ind + IND) else "") + ";"
-        case Call(expr, tpes, args) =>
+        case CallType(expr, tpes) =>
+          var (leftP, rightP) := LeftParentheses(expr);
+          if tpes == [] then expr.ToString(ind) else
+          leftP + expr.ToString(ind) + rightP + "::<" + 
+            SeqToString(tpes, (tpe: Type) => tpe.ToString(ind + IND), ", ") +">"
+          
+        case Call(expr, args) =>
           var (leftP, rightP) := LeftParentheses(expr);
           var (leftCallP, rightCallP) := match expr.RightMostIdentifier() {
             case Some("seq!") | Some("map!")  =>
@@ -791,11 +801,8 @@ module RAST
             case _ => 
               ("(", ")")                
           };
-          leftP + expr.ToString(ind) + rightP + (
-            if |tpes| == 0 then ""
-            else
-              "::<" + SeqToString(tpes, (tpe: Type) => tpe.ToString(ind + IND), ", ") +">"
-          ) + leftCallP + SeqToString(args, (arg: Expr) requires arg.Height() < this.Height() => arg.ToString(ind + IND), ", ")+ rightCallP
+          leftP + expr.ToString(ind) + rightP +
+          leftCallP + SeqToString(args, (arg: Expr) requires arg.Height() < this.Height() => arg.ToString(ind + IND), ", ")+ rightCallP
         case Select(expression, name) =>
           var (leftP, rightP) := LeftParentheses(expression);
           leftP + expression.ToString(ind) + rightP + "." + name
@@ -821,13 +828,18 @@ module RAST
     function MSel(name: string): Expr {
       MemberSelect(this, name)
     }
-
-    function Apply(typeParameters: seq<Type>, arguments: seq<Expr>): Expr {
-      Call(this, typeParameters, arguments)
+    function ApplyType(typeParameters: seq<Type>): Expr {
+      CallType(this, typeParameters)
+    }
+    function ApplyType1(typeParameter: Type): Expr {
+      CallType(this, [typeParameter])
+    }
+    function Apply(arguments: seq<Expr>): Expr {
+      Call(this, arguments)
     }
     
     function Apply1(argument: Expr): Expr {
-      Call(this, [], [argument])
+      Call(this, [argument])
     }
   }
 
@@ -851,7 +863,7 @@ module RAST
   const std_rc_Rc_new := std_rc_Rc.MSel("new")
 
   function RcNew(underlying: Expr): Expr {
-    Call(std_rc_Rc_new, [], [underlying])
+    Call(std_rc_Rc_new, [underlying])
   }
   
   datatype Fn =
@@ -896,7 +908,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
     "Self","self","static","struct","super","trait","true","type","union",
     "unsafe","use","where","while","Keywords","The","abstract","become",
     "box","do","final","macro","override","priv","try","typeof","unsized",
-    "virtual","yield"}
+    "virtual","yield","u8", "u16", "u32", "u64", "u128","i8", "i16", "i32", "i64", "i128"}
 
   predicate is_tuple_numeric(i: string) {
     |i| >= 2 && i[0] == '_' &&
@@ -983,6 +995,28 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
   const DafnyChar := if UnicodeChars then "DafnyChar" else "DafnyCharUTF16"
 
+  // Mapping from names to their ownership with which they were assigned.
+  // fn Test(i: T) is map["i" := OwnershipOwned]
+  // fn Test(i: &T) is map["i" := OwnershipBorrowed]
+  // fn Test(i: &mut T) is map["i" := OwnershipBorrowedMut]
+  datatype Environment = Environment(
+    names: seq<string>,
+    ownerships: map<string, Ownership>)
+  {
+    static function Empty(): Environment {
+      Environment([], map[])
+    }
+    predicate IsBorrowed(name: string) {
+      name in ownerships && ownerships[name] == OwnershipBorrowed
+    }
+    predicate IsBorrowedMut(name: string) {
+      name in ownerships && ownerships[name] == OwnershipBorrowedMut
+    }
+    function Add(name: string, ownership: Ownership): Environment {
+      Environment(names + [name], ownerships[name := ownership])
+    }
+  }
+
   class COMP {
     static method GenModule(mod: Module, containingPath: seq<Ident>) returns (s: R.Mod) {
       var body := GenModuleBody(mod.body, containingPath + [Ident.Ident(mod.name)]);
@@ -1059,7 +1093,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
         match field.defaultValue {
           case Some(e) => {
-            var eStr, _, _ := GenExpr(e, None, [], OwnershipOwned);
+            var eStr, _, _ := GenExpr(e, None, Environment.Empty(), OwnershipOwned);
             fieldInits := fieldInits + [
               R.AssignIdentifier(
                 escapeIdent(field.formal.name),
@@ -1094,7 +1128,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
       s := [R.StructDecl(struct)];
 
-      var implBodyRaw, traitBodies := GenClassImplBody(c.body, false, Type.Path([], [], ResolvedType.Datatype(path)), typeParamsSet);
+      var implBodyRaw, traitBodies := GenClassImplBody(c.body, false, Type.Path([], [],
+        ResolvedType.Datatype(path, c.attributes)), typeParamsSet);
       var implBody :=
         [R.FnDecl(
            R.PUB,
@@ -1103,7 +1138,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
              [], [], Some(R.SelfOwned),
              "",
              Some(R.StructBuild(
-                    escapeIdent(c.name),
+                    R.Identifier(escapeIdent(c.name)),
                     fieldInits
                   ))
            ))] + implBodyRaw;
@@ -1120,7 +1155,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         while i < |c.superClasses| {
           var superClass := c.superClasses[i];
           match superClass {
-            case Path(traitPath, typeArgs, Trait(_)) => {
+            case Path(traitPath, typeArgs, Trait(_, _)) => {
               var pathStr := GenPath(traitPath);
               var typeArgs := GenTypeArgs(typeArgs, false, false);
               var body: seq<R.ImplMember> := [];
@@ -1212,7 +1247,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       }
 
       var fullPath := containingPath + [Ident.Ident(t.name)];
-      var implBody, _ := GenClassImplBody(t.body, true, Type.Path(fullPath, [], ResolvedType.Trait(fullPath)), typeParamsSet);
+      var implBody, _ := GenClassImplBody(t.body, true, Type.Path(fullPath, [], ResolvedType.Trait(fullPath, t.attributes)), typeParamsSet);
       s :=
         R.TraitDecl(R.Trait(
                       [], R.TypeApp(R.TIdentifier(escapeIdent(t.name)), typeParams),
@@ -1251,7 +1286,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       match c.witnessExpr {
         case Some(e) => {
           // TODO(shadaj): generate statements
-          var eStr, _, _ := GenExpr(e, None, [], OwnershipOwned);
+          var eStr, _, _ := GenExpr(e, None, Environment.Empty(), OwnershipOwned);
           fnBody := fnBody + escapeIdent(c.name) + "(" + eStr.ToString(IND) + ")\n";
         }
         case None => {
@@ -1334,7 +1369,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       }
 
       var selfPath := [Ident.Ident(c.name)];
-      var implBodyRaw, traitBodies := GenClassImplBody(c.body, false, Type.Path([], [], ResolvedType.Datatype(selfPath)), typeParamsSet);
+      var implBodyRaw, traitBodies := GenClassImplBody(c.body, false, Type.Path([], [], ResolvedType.Datatype(selfPath, c.attributes)), typeParamsSet);
       var implBody: seq<R.ImplMember> := implBodyRaw;
       i := 0;
       var emittedFields: set<string> := {};
@@ -1506,7 +1541,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       var defaultImpl := [];
       if |c.ctors| > 0 {
         i := 0;
-        var structName := escapeIdent(c.name) + "::" + escapeIdent(c.ctors[0].name);
+        var structName := R.Identifier(escapeIdent(c.name)).MSel(escapeIdent(c.ctors[0].name));
         var structAssignments: seq<R.AssignIdentifier> := [];
         while i < |c.ctors[0].args| {
           var formal := c.ctors[0].args[i];
@@ -1582,10 +1617,12 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           s := R.TypeApp(s, typeArgs);
 
           match resolved {
-            case Datatype(_) => {
-              s := R.Rc(s);
+            case Datatype(_, attributes) => {
+              if Attribute("auto-non-recursive", []) !in attributes {
+                s := R.Rc(s);
+              }
             }
-            case Trait(_) => {
+            case Trait(_, _) => {
               if p == [Ident.Ident("_System"), Ident.Ident("object")] {
                 s := R.RawType("::std::rc::Rc<dyn ::std::any::Any>");
               } else {
@@ -1597,7 +1634,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
                 }
               }
             }
-            case Newtype(t, range, erased) => {
+            case Newtype(t, range, erased, attributes) => {
               if erased {
                 match NewtypeToRustType(t, range) {
                   case Some(v) =>
@@ -1746,11 +1783,15 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
     static method GenMethod(m: Method, forTrait: bool, enclosingType: Type, enclosingTypeParams: set<Type>) returns (s: R.ImplMember) {
       var params: seq<R.Formal> := GenParams(m.params);
       var paramNames := [];
+      var paramOwnerships := map[];
       var paramI := 0;
       while paramI < |m.params| {
-        paramNames := paramNames + [m.params[paramI].name];
+        var name := m.params[paramI].name;
+        paramNames := paramNames + [name];
+        paramOwnerships := paramOwnerships[name := OwnershipBorrowed];
         paramI := paramI + 1;
       }
+      var env := Environment(paramNames, paramOwnerships);
 
       if (!m.isStatic) {
         if (forTrait) {
@@ -1832,7 +1873,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           case None => {}
         }
 
-        var body, _ := GenStmts(m.body, if m.isStatic then None else Some("self"), paramNames, true, earlyReturn);
+        var body, _ := GenStmts(m.body, if m.isStatic then None else Some("self"), env, true, earlyReturn);
 
         fBody := Some(body);
       } else {
@@ -1851,7 +1892,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       );
     }
 
-    static method GenStmts(stmts: seq<Statement>, selfIdent: Option<string>, params: seq<string>, isLast: bool, earlyReturn: R.Expr) returns (generated: R.Expr, readIdents: set<string>)
+    static method GenStmts(stmts: seq<Statement>, selfIdent: Option<string>, env: Environment, isLast: bool, earlyReturn: R.Expr) returns (generated: R.Expr, readIdents: set<string>)
       decreases stmts, 1
     {
       generated := R.RawExpr("");
@@ -1860,7 +1901,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       var i := 0;
       while i < |stmts| {
         var stmt := stmts[i];
-        var stmtExpr, recIdents := GenStmt(stmt, selfIdent, params, isLast && (i == |stmts| - 1), earlyReturn);
+        var stmtExpr, recIdents := GenStmt(stmt, selfIdent, env, isLast && (i == |stmts| - 1), earlyReturn);
         readIdents := readIdents + (recIdents - declarations);
 
         match stmt {
@@ -1875,12 +1916,12 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       }
     }
 
-    static method GenAssignLhs(lhs: AssignLhs, rhs: string, selfIdent: Option<string>, params: seq<string>) returns (generated: string, needsIIFE: bool, readIdents: set<string>)
+    static method GenAssignLhs(lhs: AssignLhs, rhs: string, selfIdent: Option<string>, env: Environment) returns (generated: string, needsIIFE: bool, readIdents: set<string>)
       decreases lhs, 1
     {
       match lhs {
         case Ident(Ident(id)) => {
-          if id in params {
+          if env.IsBorrowed(id) || env.IsBorrowedMut(id) {
             generated := "*" + escapeIdent(id);
           } else {
             generated := escapeIdent(id);
@@ -1891,21 +1932,21 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         }
 
         case Select(on, field) => {
-          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, params, OwnershipBorrowed);
+          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           generated := "*(" + onExpr.ToString(IND) + "." + field + ".borrow_mut()) = " + rhs + ";";
           readIdents := recIdents;
           needsIIFE := true;
         }
 
         case Index(on, indices) => {
-          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, params, OwnershipBorrowed);
+          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           readIdents := recIdents;
 
           generated := "{\n";
 
           var i := 0;
           while i < |indices| {
-            var idx, _, recIdentsIdx := GenExpr(indices[i], selfIdent, params, OwnershipOwned);
+            var idx, _, recIdentsIdx := GenExpr(indices[i], selfIdent, env, OwnershipOwned);
 
             generated := generated + "let __idx" + Strings.OfNat(i) + " = <usize as ::dafny_runtime::NumCast>::from(" + idx.ToString(IND) + ").unwrap();\n";
 
@@ -1927,13 +1968,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       }
     }
 
-    static method GenStmt(stmt: Statement, selfIdent: Option<string>, params: seq<string>, isLast: bool, earlyReturn: R.Expr) returns (generated: R.Expr, readIdents: set<string>)
+    static method GenStmt(stmt: Statement, selfIdent: Option<string>, env: Environment, isLast: bool, earlyReturn: R.Expr) returns (generated: R.Expr, readIdents: set<string>)
       decreases stmt, 1
     {
       match stmt {
         case DeclareVar(name, typ, Some(expression)) => {
           var typeString := GenType(typ, true, false);
-          var expr, _, recIdents := GenExpr(expression, selfIdent, params, OwnershipOwned);
+          var expr, _, recIdents := GenExpr(expression, selfIdent, env, OwnershipOwned);
 
           generated := R.DeclareVar(R.MUT, escapeIdent(name), Some(typeString), Some(expr));
           readIdents := recIdents;
@@ -1944,8 +1985,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           readIdents := {};
         }
         case Assign(lhs, expression) => {
-          var lhsGen, needsIIFE, recIdents := GenAssignLhs(lhs, "__rhs", selfIdent, params);
-          var exprGen, _, exprIdents := GenExpr(expression, selfIdent, params, OwnershipOwned);
+          var lhsGen, needsIIFE, recIdents := GenAssignLhs(lhs, "__rhs", selfIdent, env);
+          var exprGen, _, exprIdents := GenExpr(expression, selfIdent, env, OwnershipOwned);
 
           if needsIIFE {
             generated := R.Block(
@@ -1961,37 +2002,37 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           readIdents := recIdents + exprIdents;
         }
         case If(cond, thn, els) => {
-          var cond, _, recIdents := GenExpr(cond, selfIdent, params, OwnershipOwned);
+          var cond, _, recIdents := GenExpr(cond, selfIdent, env, OwnershipOwned);
           var condString := cond.ToString(IND);
 
           readIdents := recIdents;
-          var thn, thnIdents := GenStmts(thn, selfIdent, params, isLast, earlyReturn);
+          var thn, thnIdents := GenStmts(thn, selfIdent, env, isLast, earlyReturn);
           readIdents := readIdents + thnIdents;
-          var els, elsIdents := GenStmts(els, selfIdent, params, isLast, earlyReturn);
+          var els, elsIdents := GenStmts(els, selfIdent, env, isLast, earlyReturn);
           readIdents := readIdents + elsIdents;
           generated := R.IfExpr(cond, thn, els);
         }
         case Labeled(lbl, body) => {
-          var body, bodyIdents := GenStmts(body, selfIdent, params, isLast, earlyReturn);
+          var body, bodyIdents := GenStmts(body, selfIdent, env, isLast, earlyReturn);
           readIdents := bodyIdents;
           generated := R.Labelled("label_" + lbl, R.Loop(None, R.StmtExpr(body, R.Break(None))));
         }
         case While(cond, body) => {
-          var cond, _, recIdents := GenExpr(cond, selfIdent, params, OwnershipOwned);
+          var cond, _, recIdents := GenExpr(cond, selfIdent, env, OwnershipOwned);
 
           readIdents := recIdents;
-          var body, bodyIdents := GenStmts(body, selfIdent, params, false, earlyReturn);
+          var body, bodyIdents := GenStmts(body, selfIdent, env, false, earlyReturn);
           readIdents := readIdents + bodyIdents;
 
           generated := R.Loop(Some(cond), body);
         }
         case Foreach(boundName, boundType, over, body) => {
-          var over, _, recIdents := GenExpr(over, selfIdent, params, OwnershipOwned);
+          var over, _, recIdents := GenExpr(over, selfIdent, env, OwnershipOwned);
 
           var boundTypeStr := GenType(boundType, false, false);
 
           readIdents := recIdents;
-          var body, bodyIdents := GenStmts(body, selfIdent, params + [boundName], false, earlyReturn);
+          var body, bodyIdents := GenStmts(body, selfIdent, env.Add(boundName, OwnershipBorrowed), false, earlyReturn);
           readIdents := readIdents + bodyIdents - {boundName};
 
           generated := R.For(escapeIdent(boundName), over, body);
@@ -2016,13 +2057,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           }
 
           var paramI := 0;
-          while paramI < |params| {
-            var param := params[paramI];
+          while paramI < |env.names| {
+            var param := env.names[paramI];
             generated := generated.Then(R.DeclareVar(R.MUT, escapeIdent(param), None, Some(R.Clone(R.Identifier(escapeIdent(param))))));
             paramI := paramI + 1;
           }
 
-          var body, bodyIdents := GenStmts(body, if selfIdent != None then Some("_this") else None, [], false, earlyReturn);
+          var body, bodyIdents := GenStmts(body, if selfIdent != None then Some("_this") else None, Environment.Empty(), false, earlyReturn);
           readIdents := bodyIdents;
           generated := generated.Then(R.Labelled("TAIL_CALL_START", 
             R.Loop(None, body)));
@@ -2054,7 +2095,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               argString := argString + ", ";
             }
 
-            var argExpr, ownership, argIdents := GenExpr(args[i], selfIdent, params, OwnershipBorrowed);
+            var argExpr, ownership, argIdents := GenExpr(args[i], selfIdent, env, OwnershipBorrowed);
             var argExprString := argExpr.ToString(IND);
 
             argString := argString + argExprString;
@@ -2063,7 +2104,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             i := i + 1;
           }
 
-          var onExpr, _, enclosingIdents := GenExpr(on, selfIdent, params, OwnershipAutoBorrowed);
+          var onExpr, _, enclosingIdents := GenExpr(on, selfIdent, env, OwnershipAutoBorrowed);
           readIdents := readIdents + enclosingIdents;
           var enclosingString := onExpr.ToString(IND);
           match on {
@@ -2110,7 +2151,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             enclosingString + renderedName + typeArgString + "(" + argString + ");");
         }
         case Return(expr) => {
-          var expr, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+          var expr, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
           readIdents := recIdents;
 
           if isLast {
@@ -2128,7 +2169,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           readIdents := {};
         }
         case Print(e) => {
-          var printedExpr, recOwnership, recIdents := GenExpr(e, selfIdent, params, OwnershipBorrowed);
+          var printedExpr, recOwnership, recIdents := GenExpr(e, selfIdent, env, OwnershipBorrowed);
           var printedExprString := printedExpr.ToString(IND);
           generated := R.RawExpr("print!(\"{}\", ::dafny_runtime::DafnyPrintWrapper(" + printedExprString + "));");
           readIdents := recIdents;
@@ -2227,7 +2268,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
     static method GenExprLiteral(
       e: Expression,
       selfIdent: Option<string>,
-      params: seq<string>,
+      env: Environment,
       expectedOwnership: Ownership
     ) returns (r: R.Expr, resultingOwnership: Ownership, readIdents: set<string>)
       requires e.Literal?
@@ -2295,12 +2336,12 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             r := 
               R.global.MSel("std").MSel("primitive")
               .MSel("char").MSel("from_u16")
-              .Apply1(r).Sel("unwrap").Apply([], []);
+              .Apply1(r).Sel("unwrap").Apply([]);
           } else {
             r := 
               R.global.MSel("std").MSel("primitive")
               .MSel("char").MSel("from_u32")
-              .Apply1(r).Sel("unwrap").Apply([], []);
+              .Apply1(r).Sel("unwrap").Apply([]);
           }
           r := R.dafny_runtime.MSel(DafnyChar).Apply1(r);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
@@ -2321,7 +2362,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
     static method GenExprBinary(
       e: Expression,
       selfIdent: Option<string>,
-      params: seq<string>,
+      env: Environment,
       expectedOwnership: Ownership
     ) returns (r: R.Expr, resultingOwnership: Ownership, readIdents: set<string>)
       requires e.BinOp?
@@ -2362,8 +2403,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         if becomesLeftCallsRight || becomesCallLeftRight then OwnershipBorrowed
         else if becomesRightCallsLeft then OwnershipAutoBorrowed
         else OwnershipOwned;
-      var left, _, recIdentsL := GenExpr(lExpr, selfIdent, params, expectedLeftOwnership);
-      var right, _, recIdentsR := GenExpr(rExpr, selfIdent, params, expectedRightOwnership);
+      var left, _, recIdentsL := GenExpr(lExpr, selfIdent, env, expectedLeftOwnership);
+      var right, _, recIdentsR := GenExpr(rExpr, selfIdent, env, expectedRightOwnership);
 
       match op {
         case In() => {
@@ -2432,19 +2473,19 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
                 if (referential) {
                   // TODO: Render using a call with two expressions
                   if (nullable) {
-                    r := R.Call(R.RawExpr("::dafny_runtime::nullable_referential_equality"), [], [left, right]);
+                    r := R.RawExpr("::dafny_runtime::nullable_referential_equality").Apply([left, right]);
                   } else {
-                    r := R.Call(R.RawExpr("::std::rc::Rc::ptr_eq"), [], [left, right]);
+                    r := R.RawExpr("::std::rc::Rc::ptr_eq").Apply([left, right]);
                   }
                 } else {
                   r := R.BinaryOp("==", left, right, DAST.Format.BinOpFormat.NoFormat());
                 }
               }
               case EuclidianDiv() => {
-                r := R.Call(R.RawExpr("::dafny_runtime::euclidian_division"), [], [left, right]);
+                r := R.RawExpr("::dafny_runtime::euclidian_division").Apply([left, right]);
               }
               case EuclidianMod() => {
-                r := R.Call(R.RawExpr("::dafny_runtime::euclidian_modulo"), [], [left, right]);
+                r := R.RawExpr("::dafny_runtime::euclidian_modulo").Apply([left, right]);
               }
               case Passthrough(op) => {
                 r := R.Expr.BinaryOp(op, left, right, format);
@@ -2461,7 +2502,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
     static method GenExprConvert(
       e: Expression,
       selfIdent: Option<string>,
-      params: seq<string>,
+      env: Environment,
       expectedOwnership: Ownership
     ) returns (r: R.Expr, resultingOwnership: Ownership, readIdents: set<string>)
       requires e.Convert?
@@ -2472,14 +2513,14 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
     {
       var Convert(expr, fromTpe, toTpe) := e;
       if fromTpe == toTpe {
-        var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, params, expectedOwnership);
+        var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
         r := recursiveGen;
         r, resultingOwnership := FromOwnership(r, recOwned, expectedOwnership);
         readIdents := recIdents;
       } else {
         match (fromTpe, toTpe) {
           case (Nullable(_), _) => {
-            var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, params, expectedOwnership);
+            var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
             var s := recursiveGen.ToString(IND);
             if recOwned == OwnershipOwned {
               s := s + ".as_ref()";
@@ -2491,7 +2532,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             readIdents := recIdents;
           }
           case (_, Nullable(_)) => {
-            var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, params, expectedOwnership);
+            var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
             var s := recursiveGen.ToString(IND);
             if recOwned == OwnershipOwned {
               s := s + ".clone()";
@@ -2502,10 +2543,10 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             r, resultingOwnership := FromOwnership(r, recOwned, expectedOwnership);
             readIdents := recIdents;
           }
-          case (_, Path(_, _, Newtype(b, range, erase))) => {
+          case (_, Path(_, _, Newtype(b, range, erase, attributes))) => {
             assert {:split_here} true;
             if fromTpe == b {
-              var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, params, expectedOwnership);
+              var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
 
               var potentialRhsType := NewtypeToRustType(b, range);
               match potentialRhsType {
@@ -2524,12 +2565,12 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               readIdents := recIdents;
             } else {
               assume {:axiom} Convert(Convert(expr, fromTpe, b), b, toTpe) < e; // make termination go through
-              r, resultingOwnership, readIdents := GenExpr(Convert(Convert(expr, fromTpe, b), b, toTpe), selfIdent, params, expectedOwnership);
+              r, resultingOwnership, readIdents := GenExpr(Convert(Convert(expr, fromTpe, b), b, toTpe), selfIdent, env, expectedOwnership);
             }
           }
-          case (Path(_, _, Newtype(b, range, erase)), _) => {
+          case (Path(_, _, Newtype(b, range, erase, attributes)), _) => {
             if b == toTpe {
-              var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, params, expectedOwnership);
+              var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
               if erase {
                 r := recursiveGen;
               } else {
@@ -2539,24 +2580,24 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               readIdents := recIdents;
             } else {
               assume {:axiom} Convert(Convert(expr, fromTpe, b), b, toTpe) < e; // make termination go through
-              r, resultingOwnership, readIdents := GenExpr(Convert(Convert(expr, fromTpe, b), b, toTpe), selfIdent, params, expectedOwnership);
+              r, resultingOwnership, readIdents := GenExpr(Convert(Convert(expr, fromTpe, b), b, toTpe), selfIdent, env, expectedOwnership);
             }
           }
           case (Primitive(Int), Primitive(Real)) => {
-            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
             r := R.RcNew(R.RawExpr("::dafny_runtime::BigRational::from_integer(" + recursiveGen.ToString(IND) + ")"));
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
           }
           case (Primitive(Real), Primitive(Int)) => {
-            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipBorrowed);
+            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipBorrowed);
             r := R.RawExpr("::dafny_runtime::dafny_rational_to_int(" + recursiveGen.ToString(IND) + ")");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
           }
           case (Primitive(Int), Passthrough(_)) => {
             var rhsType := GenType(toTpe, true, false);
-            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
             r := R.RawExpr("<" + rhsType.ToString(IND) + " as ::dafny_runtime::NumCast>::from(" + recursiveGen.ToString(IND) + ").unwrap()");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
@@ -2564,27 +2605,27 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           case (Passthrough(_), Primitive(Int)) => {
             assert {:split_here} true;
             var rhsType := GenType(fromTpe, true, false);
-            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
             r := R.RawExpr("::dafny_runtime::DafnyInt{data: ::dafny_runtime::BigInt::from(" + recursiveGen.ToString(IND) + ")}");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
           }
           case (Primitive(Int), Primitive(Char)) => {
             var rhsType := GenType(toTpe, true, false);
-            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
             r := R.RawExpr("char::from_u32(<u32 as ::dafny_runtime::NumCast>::from(" + recursiveGen.ToString(IND) + ").unwrap()).unwrap()");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
           }
           case (Primitive(Char), Primitive(Int)) => {
             var rhsType := GenType(fromTpe, true, false);
-            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
             r := R.RawExpr("::dafny_runtime::DafnyInt{data: ::BigInt::from(" + recursiveGen.ToString(IND) + " as u32)}");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
           }
           case (Passthrough(_), Passthrough(_)) => {
-            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
             var toTpeGen := GenType(toTpe, true, false);
 
             r := R.RawExpr("((" + recursiveGen.ToString(IND) + ") as " + toTpeGen.ToString(IND) + ")");
@@ -2593,7 +2634,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             readIdents := recIdents;
           }
           case _ => {
-            var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, params, expectedOwnership);
+            var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
             r := R.RawExpr("(" + recursiveGen.ToString(IND) + "/* conversion not yet implemented */)");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
@@ -2602,10 +2643,10 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       }
       return;
     }
-    static method {:vcs_split_on_every_assert} GenExpr(
+    static method GenExpr(
       e: Expression,
       selfIdent: Option<string>,
-      params: seq<string>,
+      env: Environment,
       expectedOwnership: Ownership
     ) returns (r: R.Expr, resultingOwnership: Ownership, readIdents: set<string>)
       ensures expectedOwnership != OwnershipAutoBorrowed
@@ -2615,10 +2656,10 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       match e {
         case Literal(_) =>
           r, resultingOwnership, readIdents := 
-            GenExprLiteral(e, selfIdent, params, expectedOwnership);
+            GenExprLiteral(e, selfIdent, env, expectedOwnership);
         case Ident(name) => {
           r := R.Identifier(escapeIdent(name));
-          var currentlyBorrowed := name in params; // Otherwise names are owned  // TODO(mikael) have a table to know which names are borrowed
+          var currentlyBorrowed := env.IsBorrowed(name); // Otherwise names are owned 
           if expectedOwnership == OwnershipAutoBorrowed {
             resultingOwnership := OwnershipOwned;
             // No need to do anything
@@ -2663,7 +2704,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               s := s + " ";
             }
 
-            var recursiveGen, _, recIdents := GenExpr(values[i], selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(values[i], selfIdent, env, OwnershipOwned);
 
             s := s + recursiveGen.ToString(IND) + ",";
             readIdents := readIdents + recIdents;
@@ -2699,7 +2740,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               s := s + ", ";
             }
 
-            var recursiveGen, _, recIdents := GenExpr(args[i], selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(args[i], selfIdent, env, OwnershipOwned);
             s := s + recursiveGen.ToString(IND);
             readIdents := readIdents + recIdents;
 
@@ -2717,7 +2758,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           var s := "<" + genTyp.ToString(IND) + " as ::std::default::Default>::default()";
           readIdents := {};
           while i >= 0 {
-            var recursiveGen, _, recIdents := GenExpr(dims[i], selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(dims[i], selfIdent, env, OwnershipOwned);
 
             s := "::std::rc::Rc::new(::std::cell::RefCell::new(vec![" + s + "; <usize as ::dafny_runtime::NumCast>::from(" + recursiveGen.ToString(IND) + ").unwrap()]))";
             readIdents := readIdents + recIdents;
@@ -2731,35 +2772,29 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         }
         case DatatypeValue(path, typeArgs, variant, isCo, values) => {
           var path := GenPath(path);
-          var s := "::std::rc::Rc::new(" + path + "::";
-          if |typeArgs| > 0 {
-            s := s + "<";
-            var i := 0;
-            while i < |typeArgs| {
-              if i > 0 {
-                s := s + ", ";
-              }
+          r := R.RawExpr(path);
+          var genTypeArgs := [];
+          var i := 0;
+          while i < |typeArgs| {
 
-              var typeExpr := GenType(typeArgs[i], false, false);
-              s := s + typeExpr.ToString(IND);
+            var typeExpr := GenType(typeArgs[i], false, false);
+            genTypeArgs := genTypeArgs + [typeExpr];
 
-              i := i + 1;
-            }
-            s := s + ">::";
+            i := i + 1;
           }
-          s := s + escapeIdent(variant);
+          if |typeArgs| > 0 {
+            r := r.ApplyType(genTypeArgs);
+          }
+          r := r.MSel(escapeIdent(variant));
           readIdents := {};
 
-          var i := 0;
-          s := s + " {";
+          i := 0;
+          var assignments: seq<R.AssignIdentifier> := [];
           while i < |values| {
             var (name, value) := values[i];
-            if i > 0 {
-              s := s + ", ";
-            }
 
             if isCo {
-              var recursiveGen, _, recIdents := GenExpr(value, selfIdent, [], OwnershipOwned);
+              var recursiveGen, _, recIdents := GenExpr(value, selfIdent, Environment.Empty(), OwnershipOwned);
 
               readIdents := readIdents + recIdents;
               var allReadCloned := "";
@@ -2768,28 +2803,28 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
                 allReadCloned := allReadCloned + "let " + escapeIdent(next) + " = " + escapeIdent(next) + ".clone();\n";
                 recIdents := recIdents - {next};
               }
-              s := s + escapeIdent(name) + ": ::dafny_runtime::LazyFieldWrapper(::dafny_runtime::Lazy::new(::std::boxed::Box::new({\n" + allReadCloned + "move || (" + recursiveGen.ToString(IND) + ")})))";
+              var assigned: string := "::dafny_runtime::LazyFieldWrapper(::dafny_runtime::Lazy::new(::std::boxed::Box::new({\n" + allReadCloned + "move || (" + recursiveGen.ToString(IND) + ")})))";
+              assignments := assignments + [R.AssignIdentifier(escapeIdent(name), R.RawExpr(assigned))];
             } else {
-              var recursiveGen, _, recIdents := GenExpr(value, selfIdent, params, OwnershipOwned);
+              var recursiveGen, _, recIdents := GenExpr(value, selfIdent, env, OwnershipOwned);
 
-              s := s + escapeIdent(name) + ": " + "(" + recursiveGen.ToString(IND) + ")";
+              assignments := assignments + [R.AssignIdentifier(escapeIdent(name), recursiveGen)];
               readIdents := readIdents + recIdents;
             }
             i := i + 1;
           }
-          s := s + " })";
-
-          r := R.RawExpr(s);
+          r := R.StructBuild(r, assignments);
+          r := R.RcNew(r);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
         case Convert(_, _, _) => {
           r, resultingOwnership, readIdents := 
-            GenExprConvert(e, selfIdent, params, expectedOwnership);
+            GenExprConvert(e, selfIdent, env, expectedOwnership);
         }
         case SeqConstruct(length, expr) => {
-          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
-          var lengthGen, _, lengthIdents := GenExpr(length, selfIdent, params, OwnershipOwned);
+          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
+          var lengthGen, _, lengthIdents := GenExpr(length, selfIdent, env, OwnershipOwned);
 
           r := R.RawExpr("{\nlet _initializer = " + recursiveGen.ToString(IND) + ";\n::dafny_runtime::integer_range(::dafny_runtime::Zero::zero(), " + lengthGen.ToString(IND) + ").map(|i| _initializer.0(&i)).collect::<::dafny_runtime::Sequence<_>>()\n}");
 
@@ -2805,13 +2840,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           var i := 0;
           var args := [];
           while i < |exprs| {
-            var recursiveGen, _, recIdents := GenExpr(exprs[i], selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(exprs[i], selfIdent, env, OwnershipOwned);
             readIdents := readIdents + recIdents;
             args := args + [recursiveGen];
 
             i := i + 1;
           }
-          r := R.dafny_runtime.MSel("seq!").Apply([], args);
+          r := R.dafny_runtime.MSel("seq!").Apply(args);
           if |args| == 0 {
             r := R.TypeAscription(r,
               R.dafny_runtime_type.MSel("Sequence").Apply1(genTpe));
@@ -2824,13 +2859,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           readIdents := {};
           var i := 0;
           while i < |exprs| {
-            var recursiveGen, _, recIdents := GenExpr(exprs[i], selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(exprs[i], selfIdent, env, OwnershipOwned);
 
             generatedValues := generatedValues + [recursiveGen];
             readIdents := readIdents + recIdents;
             i := i + 1;
           }
-          r := R.dafny_runtime.MSel("set!").Apply([], generatedValues);
+          r := R.dafny_runtime.MSel("set!").Apply(generatedValues);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
@@ -2839,19 +2874,19 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           readIdents := {};
           var i := 0;
           while i < |exprs| {
-            var recursiveGen, _, recIdents := GenExpr(exprs[i], selfIdent, params, OwnershipOwned);
+            var recursiveGen, _, recIdents := GenExpr(exprs[i], selfIdent, env, OwnershipOwned);
 
             generatedValues := generatedValues + [recursiveGen];
             readIdents := readIdents + recIdents;
             i := i + 1;
           }
-           r := R.dafny_runtime.MSel("multiset!").Apply([], generatedValues);
+           r := R.dafny_runtime.MSel("multiset!").Apply(generatedValues);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
         case ToMultiset(expr) => {
-          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipAutoBorrowed);
-          r := recursiveGen.Sel("as_dafny_multiset").Apply([], []);
+          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipAutoBorrowed);
+          r := recursiveGen.Sel("as_dafny_multiset").Apply([]);
           readIdents := recIdents;
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
@@ -2861,8 +2896,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           readIdents := {};
           var i := 0;
           while i < |mapElems| {
-            var recursiveGenKey, _, recIdentsKey := GenExpr(mapElems[i].0, selfIdent, params, OwnershipOwned);
-            var recursiveGenValue, _, recIdentsValue := GenExpr(mapElems[i].1, selfIdent, params, OwnershipOwned);
+            var recursiveGenKey, _, recIdentsKey := GenExpr(mapElems[i].0, selfIdent, env, OwnershipOwned);
+            var recursiveGenValue, _, recIdentsValue := GenExpr(mapElems[i].1, selfIdent, env, OwnershipOwned);
 
             generatedValues := generatedValues + [(recursiveGenKey, recursiveGenValue)];
             readIdents := readIdents + recIdentsKey + recIdentsValue;
@@ -2878,26 +2913,24 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             arguments := arguments + [R.BinaryOp("=>", genKey, genValue, DAST.Format.BinOpFormat.NoFormat())];
             i := i + 1;
           }
-          r := R.dafny_runtime.MSel("map!").Apply([], 
-            arguments
-          );
+          r := R.dafny_runtime.MSel("map!").Apply(arguments);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
         case SeqUpdate(expr, index, value) => {
-          var exprR, _, exprIdents := GenExpr(expr, selfIdent, params, OwnershipAutoBorrowed);
-          var indexR, indexOwnership, indexIdents := GenExpr(index, selfIdent, params, OwnershipBorrowed);
-          var valueR, valueOwnership, valueIdents := GenExpr(value, selfIdent, params, OwnershipBorrowed);
-          r := exprR.Sel("update_index").Apply([], [indexR, valueR]);
+          var exprR, _, exprIdents := GenExpr(expr, selfIdent, env, OwnershipAutoBorrowed);
+          var indexR, indexOwnership, indexIdents := GenExpr(index, selfIdent, env, OwnershipBorrowed);
+          var valueR, valueOwnership, valueIdents := GenExpr(value, selfIdent, env, OwnershipBorrowed);
+          r := exprR.Sel("update_index").Apply([indexR, valueR]);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := exprIdents + indexIdents + valueIdents;
           return;
         }
         case MapUpdate(expr, index, value) => {
-          var exprR, _, exprIdents := GenExpr(expr, selfIdent, params, OwnershipAutoBorrowed);
-          var indexR, indexOwnership, indexIdents := GenExpr(index, selfIdent, params, OwnershipBorrowed);
-          var valueR, valueOwnership, valueIdents := GenExpr(value, selfIdent, params, OwnershipBorrowed);
-          r := exprR.Sel("update_index").Apply([], [indexR, valueR]);
+          var exprR, _, exprIdents := GenExpr(expr, selfIdent, env, OwnershipAutoBorrowed);
+          var indexR, indexOwnership, indexIdents := GenExpr(index, selfIdent, env, OwnershipBorrowed);
+          var valueR, valueOwnership, valueIdents := GenExpr(value, selfIdent, env, OwnershipBorrowed);
+          r := exprR.Sel("update_index").Apply([indexR, valueR]);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := exprIdents + indexIdents + valueIdents;
           return;
@@ -2934,13 +2967,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         }
         case Ite(cond, t, f) => {
           assert {:split_here} true;
-          var cond, _, recIdentsCond := GenExpr(cond, selfIdent, params, OwnershipOwned);
+          var cond, _, recIdentsCond := GenExpr(cond, selfIdent, env, OwnershipOwned);
           var condString := cond.ToString(IND);
 
-          var _, tHasToBeOwned, _ := GenExpr(t, selfIdent, params, expectedOwnership); // check if t has to be owned even if not requested
-          var fExpr, fOwned, recIdentsF := GenExpr(f, selfIdent, params, tHasToBeOwned);
+          var _, tHasToBeOwned, _ := GenExpr(t, selfIdent, env, expectedOwnership); // check if t has to be owned even if not requested
+          var fExpr, fOwned, recIdentsF := GenExpr(f, selfIdent, env, tHasToBeOwned);
           var fString := fExpr.ToString(IND);
-          var tExpr, _, recIdentsT := GenExpr(t, selfIdent, params, fOwned); // there's a chance that f forced ownership
+          var tExpr, _, recIdentsT := GenExpr(t, selfIdent, env, fOwned); // there's a chance that f forced ownership
           var tString := tExpr.ToString(IND);
 
           r := R.RawExpr("(if " + condString + " {\n" + tString + "\n} else {\n" + fString + "\n})");
@@ -2950,7 +2983,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case UnOp(Not, e, format) => {
-          var recursiveGen, _, recIdents := GenExpr(e, selfIdent, params, OwnershipOwned);
+          var recursiveGen, _, recIdents := GenExpr(e, selfIdent, env, OwnershipOwned);
 
           r := R.UnaryOp("!", recursiveGen, format);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
@@ -2958,7 +2991,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case UnOp(BitwiseNot, e, format) => {
-          var recursiveGen, _, recIdents := GenExpr(e, selfIdent, params, OwnershipOwned);
+          var recursiveGen, _, recIdents := GenExpr(e, selfIdent, env, OwnershipOwned);
 
           r := R.UnaryOp("~", recursiveGen, format);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
@@ -2966,18 +2999,18 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case UnOp(Cardinality, e, format) => {
-          var recursiveGen, recOwned, recIdents := GenExpr(e, selfIdent, params, OwnershipAutoBorrowed);
+          var recursiveGen, recOwned, recIdents := GenExpr(e, selfIdent, env, OwnershipAutoBorrowed);
 
-          r := recursiveGen.Sel("cardinality").Apply([], []);
+          r := recursiveGen.Sel("cardinality").Apply([]);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := recIdents;
           return;
         }
         case BinOp(_, _, _, _) =>
           r, resultingOwnership, readIdents := 
-            GenExprBinary(e, selfIdent, params, expectedOwnership);
+            GenExprBinary(e, selfIdent, env, expectedOwnership);
         case ArrayLen(expr, dim) => {
-          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
 
           if dim == 0 {
             r := R.RawExpr("::dafny_runtime::BigInt::from((" + recursiveGen.ToString(IND) + ").borrow().len())");
@@ -2996,21 +3029,21 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case MapKeys(expr) => {
-          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
           readIdents := recIdents;
-          r := R.Call(recursiveGen.Sel("keys"), [], []);
+          r := recursiveGen.Sel("keys").Apply([]);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
         case MapValues(expr) => {
-          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, params, OwnershipOwned);
+          var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
           readIdents := recIdents;
-          r := R.Call(recursiveGen.Sel("values"), [], []);
+          r := recursiveGen.Sel("values").Apply([]);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
         case SelectFn(on, field, isDatatype, isStatic, arity) => {
-          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, params, OwnershipBorrowed);
+          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           var s: string;
           var onString := onExpr.ToString(IND);
 
@@ -3053,7 +3086,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case Select(Companion(c), field, isConstant, isDatatype) => {
-          var onExpr, onOwned, recIdents := GenExpr(Companion(c), selfIdent, params, OwnershipBorrowed);
+          var onExpr, onOwned, recIdents := GenExpr(Companion(c), selfIdent, env, OwnershipBorrowed);
 
           r := R.RawExpr(onExpr.ToString(IND) + "::" + escapeIdent(field) + "()");
 
@@ -3062,9 +3095,9 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case Select(on, field, isConstant, isDatatype) => {
-          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, params, OwnershipBorrowed);
+          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           if isDatatype || isConstant {
-            r := R.Call(onExpr.Sel(escapeIdent(field)), [], []);
+            r := onExpr.Sel(escapeIdent(field)).Apply([]);
             r, resultingOwnership := FromOwned(r, expectedOwnership);
           } else {
             var s: string;
@@ -3076,16 +3109,16 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         }
         case Index(on, collKind, indices) => {
           assert {:split_here} true;
-          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, params, OwnershipAutoBorrowed);
+          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, env, OwnershipAutoBorrowed);
           readIdents := recIdents;
           r := onExpr;
 
           var i := 0;
           while i < |indices| {
             if collKind == CollKind.Array {
-              r := r.Sel("borrow").Apply([], []);
+              r := r.Sel("borrow").Apply([]);
             }
-            var idx, idxOwned, recIdentsIdx := GenExpr(indices[i], selfIdent, params, OwnershipBorrowed);
+            var idx, idxOwned, recIdentsIdx := GenExpr(indices[i], selfIdent, env, OwnershipBorrowed);
             r := r.Sel("get").Apply1(idx);
             readIdents := readIdents + recIdentsIdx;
             i := i + 1;
@@ -3094,7 +3127,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case IndexRange(on, isArray, low, high) => {
-          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, params, OwnershipAutoBorrowed);
+          var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, env, OwnershipAutoBorrowed);
           readIdents := recIdents;
           
           var methodName := if low.Some? then
@@ -3104,7 +3137,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           var arguments := [];
           match low {
             case Some(l) => {
-              var lExpr, _, recIdentsL := GenExpr(l, selfIdent, params, OwnershipBorrowed);
+              var lExpr, _, recIdentsL := GenExpr(l, selfIdent, env, OwnershipBorrowed);
               arguments := arguments + [lExpr];
               readIdents := readIdents + recIdentsL;
             }
@@ -3113,7 +3146,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
           match high {
             case Some(h) => {
-              var hExpr, _, recIdentsH := GenExpr(h, selfIdent, params, OwnershipBorrowed);
+              var hExpr, _, recIdentsH := GenExpr(h, selfIdent, env, OwnershipBorrowed);
               arguments := arguments + [hExpr];
               readIdents := readIdents + recIdentsH;
             }
@@ -3125,17 +3158,17 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             if methodName != "" {
               methodName := "_" + methodName;
             }
-            r := R.dafny_runtime_Sequence.MSel("from_array"+methodName).Apply([], arguments);
+            r := R.dafny_runtime_Sequence.MSel("from_array"+methodName).Apply(arguments);
           } else {
             if methodName != "" {
-              r := r.Sel(methodName).Apply([], arguments);
+              r := r.Sel(methodName).Apply(arguments);
             }
           }
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
         case TupleSelect(on, idx) => {
-          var onExpr, onOwnership, recIdents := GenExpr(on, selfIdent, params, OwnershipAutoBorrowed);
+          var onExpr, onOwnership, recIdents := GenExpr(on, selfIdent, env, OwnershipAutoBorrowed);
           r := onExpr.Sel(Strings.OfNat(idx));
           r, resultingOwnership := FromOwnership(r, onOwnership, expectedOwnership);
           readIdents := recIdents;
@@ -3159,14 +3192,14 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           var argExprs := [];
           var i := 0;
           while i < |args| {
-            var argExpr, argOwnership, argIdents := GenExpr(args[i], selfIdent, params, OwnershipBorrowed);
+            var argExpr, argOwnership, argIdents := GenExpr(args[i], selfIdent, env, OwnershipBorrowed);
             argExprs := argExprs + [argExpr];
             readIdents := readIdents + argIdents;
 
             i := i + 1;
           }
 
-          var onExpr, _, recIdents := GenExpr(on, selfIdent, params, OwnershipAutoBorrowed);
+          var onExpr, _, recIdents := GenExpr(on, selfIdent, env, OwnershipAutoBorrowed);
           readIdents := readIdents + recIdents;
           var renderedName := match name {
             case Name(ident) => escapeIdent(ident)
@@ -3181,20 +3214,27 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               onExpr := onExpr.Sel(renderedName);
             }
           }
-
-          r := R.Call(onExpr, typeExprs, argExprs);
+          r := onExpr;
+          if |typeExprs| > 0 {
+            r := r.ApplyType(typeExprs);
+          }
+          r := r.Apply(argExprs);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
         case Lambda(params, retType, body) => {
           var paramNames := [];
+          var paramOwnerships := map[];
           var i := 0;
           while i < |params| {
-            paramNames := paramNames + [params[i].name];
+            var name := params[i].name;
+            paramNames := paramNames + [name];
+            paramOwnerships := paramOwnerships[name := OwnershipBorrowed];
             i := i + 1;
           }
+          var env := Environment(paramNames, paramOwnerships);
 
-          var recursiveGen, recIdents := GenStmts(body, if selfIdent != None then Some("_this") else None, paramNames, true, R.RawExpr(""));
+          var recursiveGen, recIdents := GenStmts(body, if selfIdent != None then Some("_this") else None, env, true, R.RawExpr(""));
           readIdents := {};
           var allReadCloned := "";
           while recIdents != {} decreases recIdents {
@@ -3236,11 +3276,14 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         }
         case BetaRedex(values, retType, expr) => {
           var paramNames := [];
+          var paramOwnerships := map[];
           var paramNamesSet := {};
           var i := 0;
           while i < |values| {
-            paramNames := paramNames + [values[i].0.name];
-            paramNamesSet := paramNamesSet + {values[i].0.name};
+            var name := values[i].0.name;
+            paramNames := paramNames + [name];
+            paramOwnerships := paramOwnerships[name := OwnershipBorrowed];
+            paramNamesSet := paramNamesSet + {name};
             i := i + 1;
           }
 
@@ -3256,7 +3299,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
             var typStr := GenType(values[i].0.typ, false, true);
 
-            var valueGen, _, recIdents := GenExpr(values[i].1, selfIdent, params, OwnershipOwned);
+            var valueGen, _, recIdents := GenExpr(values[i].1, selfIdent, env, OwnershipOwned);
             s := s + "let " + escapeIdent(values[i].0.name) + ": " + typStr.ToString(IND) + " = ";
             readIdents := readIdents + recIdents;
 
@@ -3264,7 +3307,9 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             i := i + 1;
           }
 
-          var recGen, recOwned, recIdents := GenExpr(expr, selfIdent, paramNames, expectedOwnership);
+          var newEnv := Environment(paramNames, paramOwnerships);
+
+          var recGen, recOwned, recIdents := GenExpr(expr, selfIdent, newEnv, expectedOwnership);
           readIdents := recIdents - paramNamesSet;
 
           s := s  + recGen.ToString(IND) + "\n}";
@@ -3273,11 +3318,11 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case IIFE(name, tpe, value, iifeBody) => {
-          var valueGen, _, recIdents := GenExpr(value, selfIdent, params, OwnershipOwned);
+          var valueGen, _, recIdents := GenExpr(value, selfIdent, env, OwnershipOwned);
 
           readIdents := recIdents;
           var valueTypeGen := GenType(tpe, false, true);
-          var bodyGen, _, bodyIdents := GenExpr(iifeBody, selfIdent, params, OwnershipOwned);
+          var bodyGen, _, bodyIdents := GenExpr(iifeBody, selfIdent, env, OwnershipOwned);
           readIdents := readIdents + (bodyIdents - {name.id});
 
           r := R.RawExpr("{\nlet " + escapeIdent(name.id) + ": " + valueTypeGen.ToString(IND) + " = " + valueGen.ToString(IND) + ";\n" + bodyGen.ToString(IND) + "\n}");
@@ -3285,7 +3330,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case Apply(func, args) => {
-          var funcExpr, _, recIdents := GenExpr(func, selfIdent, params, OwnershipBorrowed);
+          var funcExpr, _, recIdents := GenExpr(func, selfIdent, env, OwnershipBorrowed);
           readIdents := recIdents;
 
           var argString := "";
@@ -3295,7 +3340,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               argString := argString + ", ";
             }
 
-            var argExpr, argOwned, argIdents := GenExpr(args[i], selfIdent, params, OwnershipBorrowed);
+            var argExpr, argOwned, argIdents := GenExpr(args[i], selfIdent, env, OwnershipBorrowed);
             var argExprString := argExpr.ToString(IND);
             if argOwned == OwnershipOwned {
               argExprString := "&" + argExprString;
@@ -3312,7 +3357,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case TypeTest(on, dType, variant) => {
-          var exprGen, _, recIdents := GenExpr(on, selfIdent, params, OwnershipBorrowed);
+          var exprGen, _, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           var dTypePath := GenPath(dType);
           r := R.RawExpr("matches!(" + exprGen.ToString(IND) + ".as_ref(), " + dTypePath + "::" + escapeIdent(variant) + "{ .. })");
           r, resultingOwnership := FromOwned(r, expectedOwnership);
@@ -3326,14 +3371,14 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case SetBoundedPool(of) => {
-          var exprGen, _, recIdents := GenExpr(of, selfIdent, params, OwnershipBorrowed);
+          var exprGen, _, recIdents := GenExpr(of, selfIdent, env, OwnershipBorrowed);
           r := R.RawExpr("(" + exprGen.ToString(IND) + ").iter()");
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := recIdents;
           return;
         }
         case SeqBoundedPool(of, includeDuplicates) => {
-          var exprGen, _, recIdents := GenExpr(of, selfIdent, params, OwnershipBorrowed);
+          var exprGen, _, recIdents := GenExpr(of, selfIdent, env, OwnershipBorrowed);
           var s := "(" + exprGen.ToString(IND) + ").iter()";
           if !includeDuplicates {
             s := "::dafny_runtime::itertools::Itertools::unique(" + s + ")";
@@ -3344,8 +3389,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case IntRange(lo, hi) => {
-          var lo, _, recIdentsLo := GenExpr(lo, selfIdent, params, OwnershipOwned);
-          var hi, _, recIdentsHi := GenExpr(hi, selfIdent, params, OwnershipOwned);
+          var lo, _, recIdentsLo := GenExpr(lo, selfIdent, env, OwnershipOwned);
+          var hi, _, recIdentsHi := GenExpr(hi, selfIdent, env, OwnershipOwned);
 
           r := R.RawExpr("::dafny_runtime::integer_range(" + lo.ToString(IND) + ", " + hi.ToString(IND) + ")");
           r, resultingOwnership := FromOwned(r, expectedOwnership);
