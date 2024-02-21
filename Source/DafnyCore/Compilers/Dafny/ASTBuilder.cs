@@ -994,6 +994,24 @@ namespace Microsoft.Dafny.Compilers {
     }
   }
 
+  class NoStatementBuffer : StatementContainer {
+    public void AddUnsupported(string why) {
+      throw new Exception(why);
+    }
+
+    public void AddStatement(DAST.Statement item) {
+      throw new Exception("<i>Add statements in pure expressions</i>, in a context where statements can't be added, tried to add " + item);
+    }
+
+    public void AddBuildable(BuildableStatement item) {
+      throw new Exception("<i>Add buildable statements in pure expressions</i>, in a context where statements can't be added, tried to add " + item);
+    }
+
+    public List<object> ForkList() {
+      throw new Exception("<i>Fork statements in pure expressions</i>, in a context where statements can't be added");
+    }
+  }
+
   class StatementBuffer : StatementContainer {
     readonly List<object> statements = new();
 

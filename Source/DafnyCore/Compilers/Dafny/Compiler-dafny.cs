@@ -1910,9 +1910,16 @@ namespace Microsoft.Dafny.Compilers {
     protected bool GetExprConverter(ConcreteSyntaxTree wr, ConcreteSyntaxTree wStmts,
       out BuilderSyntaxTree<ExprContainer> builder,
       out Func<Expression, DAST.Expression> converter) {
-      if (wr is BuilderSyntaxTree<ExprContainer> b && wStmts is BuilderSyntaxTree<StatementContainer> s) {
-        converter = (Expression expr) => ConvertExpression(expr, s);
+      if (wr is BuilderSyntaxTree<ExprContainer> b) {
         builder = b;
+        if (wStmts is BuilderSyntaxTree<StatementContainer> s) {
+          converter = (Expression expr) => ConvertExpression(expr, s);  
+        } else {
+          var statementBuf = new NoStatementBuffer();
+          var sNoStmt = new BuilderSyntaxTree<StatementContainer>(statementBuf, this);
+          converter = (Expression expr) => ConvertExpression(expr, sNoStmt);  
+        }
+        
         return true;
       }
       converter = null;
