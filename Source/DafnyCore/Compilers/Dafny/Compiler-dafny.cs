@@ -202,9 +202,11 @@ namespace Microsoft.Dafny.Compilers {
         if (from == null || to == null || from.Equals(to, true)) {
           return wr;
         } else {
-          throwGeneralUnsupported($"<i>Coercion</i> from {from} to {to}");
-          return new BuilderSyntaxTree<ExprContainer>(
-            new ExprBuffer(this), this);
+          if (wr is BuilderSyntaxTree<ExprContainer> stmt) {
+            return new BuilderSyntaxTree<ExprContainer>(stmt.Builder.Convert(GenType(from), GenType(to)), this);
+          } else {
+            return base.EmitCoercionIfNecessary(from, to, tok, wr);
+          }
         }
       }
     }
@@ -1627,14 +1629,14 @@ namespace Microsoft.Dafny.Compilers {
 
         int argI = 0;
         for (int i = 0; i < dtv.Ctor.Formals.Count; i++) {
-          var formal = dtv.Ctor.Formals[i];
+          var formal = dtv.Ctor.Destructors[i];
           if (formal.IsGhost) {
             continue;
           }
 
           var actual = contents[argI];
           namedContents.Add(_System.Tuple2<ISequence<Rune>, DAST.Expression>.create(
-            Sequence<Rune>.UnicodeFromString(formal.CompileName),
+            Sequence<Rune>.UnicodeFromString(formal.GetCompileName(Options)),
             actual
           ));
 
@@ -1716,9 +1718,10 @@ namespace Microsoft.Dafny.Compilers {
             int.Parse(dtor.CorrespondingFormals[0].NameForCompilation)
           ), null, this);
         } else {
+          var compileName = GetExtractOverrideName(member.Attributes, member.GetCompileName(Options));
           return new ExprLvalue((DAST.Expression)DAST.Expression.create_Select(
             objExpr,
-            Sequence<Rune>.UnicodeFromString(member.GetCompileName(Options)),
+            Sequence<Rune>.UnicodeFromString(compileName),
             member is ConstantField,
             member.EnclosingClass is DatatypeDecl
           ), (DAST.AssignLhs)DAST.AssignLhs.create_Select(
@@ -2051,15 +2054,23 @@ namespace Microsoft.Dafny.Compilers {
               int.Parse(dtor.NameForCompilation)
             ));
           } else {
+            var compileName = GetExtractOverrideName(dtor.Attributes, dtor.CompileName);
             builder.Builder.AddExpr((DAST.Expression)DAST.Expression.create_Select(
               sourceAST,
-              Sequence<Rune>.UnicodeFromString(dtor.CompileName),
+              Sequence<Rune>.UnicodeFromString(compileName),
               false,
               true
             ));
           }
         }
       }
+    }
+
+    private static string GetExtractOverrideName(Attributes attributes, string defaultValue)
+    {
+      return ((Attributes.Find(attributes, "extern_extract") is { } extern_extract
+               && extern_extract.Args.Count() == 1 && extern_extract.Args[0] is LiteralExpr { Value: string overrideName}
+        ? overrideName : defaultValue));
     }
 
     protected override ConcreteSyntaxTree CreateLambda(List<Type> inTypes, IToken tok, List<string> inNames,

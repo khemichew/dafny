@@ -177,8 +177,8 @@ module RAST
                                t.ToString(ind + IND), " + "))
     }
   }
-  const Self := Borrowed(SelfOwned)
-  const SelfMut := BorrowedMut(SelfOwned)
+  const SelfBorrowed := Borrowed(SelfOwned)
+  const SelfBorrowedMut := BorrowedMut(SelfOwned)
   function Rc(underlying: Type): Type {
     TypeApp(std_type.MSel("rc").MSel("Rc"), [underlying])
   }
@@ -276,6 +276,10 @@ module RAST
     function Apply1(arg: Type): Type {
       TypeApp(this, [arg])
     }
+
+    function Apply(args: seq<Type>): Type {
+      TypeApp(this, args)
+    }
   }
 
   const global_type := TIdentifier("")
@@ -327,13 +331,13 @@ module RAST
     function ToString(ind: string): string {
       if name == "self" && tpe.SelfOwned? then name
       else if name == "&self" && tpe == Borrowed(SelfOwned) then name
-      else if name == "&mut self" && tpe == Borrowed(SelfMut) then name
+      else if name == "&mut self" && tpe == Borrowed(SelfBorrowedMut) then name
       else
         name + ": " + tpe.ToString(ind)
     }
-    static const self := Formal("&self", Self)
+    static const selfBorrowed := Formal("&self", SelfBorrowed)
     static const selfOwned := Formal("self", SelfOwned)
-    static const selfMut := Formal("&mut self", SelfMut)
+    static const selfMut := Formal("&mut self", SelfBorrowedMut)
   }
 
   datatype Pattern =
@@ -532,6 +536,8 @@ module RAST
               if name == name2 then
                 1 + default
               else default
+            case StmtExpr(IfExpr(UnaryOp("!", BinaryOp("==", a, b, f), of), RawExpr("panic!(\"Halt\");"), RawExpr("")), last) =>
+              1 + default
             case _ => default
           }
           
@@ -627,8 +633,8 @@ module RAST
                 Identifier(""), "dafny_runtime"), "DafnyInt"), "from"), args) =>
                 if |args| == 1 then
                   match args[0] {
-                    case LiteralInt(number) => LiteralInt("/*optimized*/"+number)
-                    case LiteralString(number, _) => LiteralInt("/*optimized*/"+number)
+                    case LiteralInt(number) => LiteralInt(number)
+                    case LiteralString(number, _) => LiteralInt(number)
                     case _ => this
                   }
                 else this
@@ -649,6 +655,10 @@ module RAST
             rewriting
           else
             this
+        case StmtExpr(IfExpr(UnaryOp("!", BinaryOp("==", a, b, f), of), RawExpr("panic!(\"Halt\");"), RawExpr("")), last) =>
+          var rewriting := StmtExpr(Identifier("assert_eq!").Apply([a, b]), last);
+          assume {:axiom} rewriting.Height() < this.Height(); // TODO: Need to prove formally
+          rewriting
         case _ => this
       }
     }
@@ -711,7 +721,9 @@ module RAST
           "{\n" + ind + IND + underlying.ToString(ind + IND) + "\n" + ind + "}"
         case IfExpr(cond, thn, els) =>
           "if " + cond.ToString(ind + IND) + " {\n" + ind + IND + thn.ToString(ind + IND) +
-          "\n" + ind + "} else {\n" + ind + IND + els.ToString(ind + IND) + "\n" + ind + "}"
+          "\n" + ind + "}" +
+          if els == RawExpr("") then "" else
+           " else {\n" + ind + IND + els.ToString(ind + IND) + "\n" + ind + "}"
         case StructBuild(name, assignments) =>
           name.ToString(ind) + " {" +
           SeqToString(assignments, (assignment: AssignIdentifier)
@@ -1096,17 +1108,21 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
         match field.defaultValue {
           case Some(e) => {
-            var eStr, _, _ := GenExpr(e, None, Environment.Empty(), OwnershipOwned);
+            var expr, _, _ := GenExpr(e, None, Environment.Empty(), OwnershipOwned);
+            var RefCellNew := R.std.MSel("cell").MSel("RefCell").MSel("new");
+
             fieldInits := fieldInits + [
               R.AssignIdentifier(
                 escapeIdent(field.formal.name),
-                R.RawExpr("::std::cell::RefCell::new(" + eStr.ToString(IND) + ")"))];
+                RefCellNew.Apply1(expr))];
           }
           case None => {
+            var RefCellNew := R.std.MSel("cell").MSel("RefCell").MSel("new");
+            var default := R.std.MSel("default").MSel("Default").MSel("default");
             fieldInits := fieldInits + [
               R.AssignIdentifier(
                 escapeIdent(field.formal.name),
-                R.RawExpr("::std::cell::RefCell::new(::std::default::Default::default())"))];
+                RefCellNew.Apply1(default.Apply([])))];
           }
         }
 
@@ -1125,7 +1141,9 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         typeParamI := typeParamI + 1;
       }
 
-      var struct := R.Struct([], escapeIdent(c.name), sTypeParams, R.NamedFormals(fields));
+      var datatypeName := escapeIdent(c.name);
+
+      var struct := R.Struct([], datatypeName, sTypeParams, R.NamedFormals(fields));
       var typeParamsAsTypes := 
         Std.Collections.Seq.Map((typeParam: R.TypeParam) => R.RawType(typeParam.content), sTypeParams);
 
@@ -1141,14 +1159,14 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
              [], [], Some(R.SelfOwned),
              "",
              Some(R.StructBuild(
-                    R.Identifier(escapeIdent(c.name)),
+                    R.Identifier(datatypeName),
                     fieldInits
                   ))
            ))] + implBodyRaw;
 
       var i := R.Impl(
         sConstrainedTypeParams,
-        R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+        R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
         whereConstraints,
         implBody
       );
@@ -1186,14 +1204,14 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       var d := R.ImplFor(
         sConstrainedTypeParams,
         R.DefaultTrait,
-        R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+        R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
         whereConstraints,
         [R.FnDecl(
            R.PRIV,
            R.Fn(
              "default", [], [], Some(R.SelfOwned),
              "",
-             Some(R.RawExpr(escapeIdent(c.name) + "::new()"))))]
+             Some(R.RawExpr(datatypeName + "::new()"))))]
       );
       var defaultImpl := [R.ImplDecl(d)];
 
@@ -1201,13 +1219,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         R.ImplFor(
           sConstrainedTypeParams,
           R.DafnyPrintTrait,
-          R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+          R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
           "",
           [R.FnDecl(
              R.PRIV,
              R.Fn(
                "fmt_print", [],
-               [R.Formal.self, R.Formal("_formatter", R.RawType("&mut ::std::fmt::Formatter")), R.Formal("_in_seq", R.RawType("bool"))],
+               [R.Formal.selfBorrowed, R.Formal("_formatter", R.RawType("&mut ::std::fmt::Formatter")), R.Formal("_in_seq", R.RawType("bool"))],
                Some(R.RawType("std::fmt::Result")),
                "",
                Some(R.RawExpr("write!(_formatter, \"" + c.enclosingModule.id + "." + c.name + "\")"))
@@ -1218,13 +1236,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       var pp := R.ImplFor(
         sTypeParams,
         R.RawType("::std::cmp::PartialEq"),
-        R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+        R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
         "",
         [R.FnDecl(
            R.PRIV,
            R.Fn(
              "eq", [],
-             [R.Formal.self, R.Formal("other", R.Self)],
+             [R.Formal.selfBorrowed, R.Formal("other", R.SelfBorrowed)],
              Some(R.RawType("bool")),
              "",
              Some(R.RawExpr("::std::ptr::eq(self, other)"))
@@ -1272,6 +1290,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         case None =>
           underlyingType := GenType(c.base, false, false);
       }
+      var datatypeName := escapeIdent(c.name);
       s := [
         R.StructDecl(
           R.Struct(
@@ -1279,7 +1298,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               R.RawAttribute("#[derive(Clone, PartialEq)]"),
               R.RawAttribute("#[repr(transparent)]")
             ],
-            escapeIdent(c.name),
+            datatypeName,
             sTypeParams,
             R.NamelessFormals([R.NamelessFormal(R.PUB, underlyingType)])
           ))];
@@ -1290,10 +1309,10 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         case Some(e) => {
           // TODO(shadaj): generate statements
           var eStr, _, _ := GenExpr(e, None, Environment.Empty(), OwnershipOwned);
-          fnBody := fnBody + escapeIdent(c.name) + "(" + eStr.ToString(IND) + ")\n";
+          fnBody := fnBody + datatypeName + "(" + eStr.ToString(IND) + ")\n";
         }
         case None => {
-          fnBody := fnBody + escapeIdent(c.name) + "(::std::default::Default::default())";
+          fnBody := fnBody + datatypeName + "(::std::default::Default::default())";
         }
       }
 
@@ -1310,18 +1329,18 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           R.ImplFor(
             sConstrainedTypeParams,
             R.DefaultTrait,
-            R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+            R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
             whereConstraints,
             [body]))];
       s := s + [
         R.ImplDecl(R.ImplFor(
                      sConstrainedTypeParams,
                      R.DafnyPrintTrait,
-                     R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+                     R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
                      "",
                      [R.FnDecl(R.PRIV,
                                R.Fn("fmt_print", [],
-                                    [R.Formal.self, R.Formal("_formatter", R.RawType("&mut ::std::fmt::Formatter")), R.Formal("in_seq", R.RawType("bool"))],
+                                    [R.Formal.selfBorrowed, R.Formal("_formatter", R.RawType("&mut ::std::fmt::Formatter")), R.Formal("in_seq", R.RawType("bool"))],
                                     Some(R.RawType("::std::fmt::Result")),
                                     "",
                                     Some(R.RawExpr("::dafny_runtime::DafnyPrint::fmt_print(&self.0, _formatter, in_seq)"))
@@ -1331,13 +1350,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           R.ImplFor(
             sConstrainedTypeParams,
             R.RawType("::std::ops::Deref"),
-            R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+            R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
             "",
             [R.RawImplMember("type Target = " + underlyingType.ToString(IND) + ";"),
              R.FnDecl(
                R.PRIV,
                R.Fn("deref", [],
-                    [R.Formal.self], Some(R.RawType("&Self::Target")),
+                    [R.Formal.selfBorrowed], Some(R.SelfBorrowed.MSel("Target")),
                     "",
                     Some(R.RawExpr("&self.0"))))]))];
     }
@@ -1348,6 +1367,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         Std.Collections.Seq.Map((t: R.TypeParam) => R.RawType(t.content), sTypeParams);
       var constrainedTypeParams := R.TypeParam.ToStringMultiple(sConstrainedTypeParams, IND + IND);
 
+      var datatypeName := escapeIdent(c.name);
       var ctors: seq<R.EnumCase> := [];
       var i := 0;
       while i < |c.ctors| {
@@ -1393,7 +1413,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             while k < |c.ctors| {
               var ctor2 := c.ctors[k];
 
-              var pattern := escapeIdent(c.name) + "::" + escapeIdent(ctor2.name) + " { ";
+              var pattern := datatypeName + "::" + escapeIdent(ctor2.name) + " { ";
               var rhs: string;
               var l := 0;
               var hasMatchingField := false;
@@ -1424,7 +1444,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
             if |c.typeParams| > 0 {
               cases := cases + [
-                R.MatchCase(R.RawPattern(escapeIdent(c.name) + "::_PhantomVariant(..)"), R.RawExpr("panic!()"))
+                R.MatchCase(R.RawPattern(datatypeName + "::_PhantomVariant(..)"), R.RawExpr("panic!()"))
               ];
             }
 
@@ -1438,7 +1458,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
                 R.PUB,
                 R.Fn(
                   escapeIdent(formal.name),
-                  [], [R.Formal.self], Some(R.Borrowed(formalType)),
+                  [], [R.Formal.selfBorrowed], Some(R.Borrowed(formalType)),
                   "",
                   Some(methodBody)
                 ))];
@@ -1462,18 +1482,17 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
                                       tpe => R.NamelessFormal(R.PRIV, tpe), types))
                           )];
       }
-
       var enumBody :=
         [R.EnumDecl(
-           R.Enum([R.RawAttribute("#[derive(PartialEq)]")],
-                  escapeIdent(c.name),
+           R.Enum([R.RawAttribute("#[derive(PartialEq, Clone)]")],
+                  datatypeName,
                   sTypeParams,
                   ctors
            )),
          R.ImplDecl(
            R.Impl(
              sConstrainedTypeParams,
-             R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+             R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
              whereConstraints,
              implBody
            ))];
@@ -1510,7 +1529,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         printRhs := printRhs.Then(R.RawExpr("Ok(())"));
 
         printImplBodyCases := printImplBodyCases + [
-          R.MatchCase(R.RawPattern(escapeIdent(c.name) + "::" + ctorMatch),
+          R.MatchCase(R.RawPattern(datatypeName + "::" + ctorMatch),
                       R.Block(printRhs))
         ];
         i := i + 1;
@@ -1518,7 +1537,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
       if |c.typeParams| > 0 {
         printImplBodyCases := printImplBodyCases + [
-          R.MatchCase(R.RawPattern(escapeIdent(c.name) + "::_PhantomVariant(..)"), R.RawExpr("{panic!()}"))
+          R.MatchCase(R.RawPattern(datatypeName + "::_PhantomVariant(..)"), R.RawExpr("{panic!()}"))
         ];
       }
       var printImplBody := R.Match(
@@ -1529,22 +1548,23 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           R.ImplFor(
             sConstrainedTypeParams,
             R.DafnyPrintTrait,
-            R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+            R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes),
             "",
             [R.FnDecl(
                R.PRIV,
                R.Fn(
                  "fmt_print", [],
-                 [R.Formal.self, R.Formal("_formatter", R.RawType("&mut ::std::fmt::Formatter")), R.Formal("_in_seq", R.RawType("bool"))],
+                 [R.Formal.selfBorrowed, R.Formal("_formatter", R.RawType("&mut ::std::fmt::Formatter")), R.Formal("_in_seq", R.RawType("bool"))],
                  Some(R.RawType("std::fmt::Result")),
                  "",
                  Some(printImplBody)))]
           ))];
 
       var defaultImpl := [];
+      var asRefImpl := [];
       if |c.ctors| > 0 {
         i := 0;
-        var structName := R.Identifier(escapeIdent(c.name)).MSel(escapeIdent(c.ctors[0].name));
+        var structName := R.Identifier(datatypeName).MSel(escapeIdent(c.ctors[0].name));
         var structAssignments: seq<R.AssignIdentifier> := [];
         while i < |c.ctors[0].args| {
           var formal := c.ctors[0].args[i];
@@ -1556,17 +1576,17 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         var defaultConstrainedTypeParams := R.TypeParam.AddConstraintsMultiple(
           sTypeParams, [R.DefaultTrait]
         );
-
+        var fullType := R.TypeApp(R.TIdentifier(datatypeName), typeParamsAsTypes);
         defaultImpl := [
           R.ImplDecl(
             R.ImplFor(
               defaultConstrainedTypeParams,
               R.DefaultTrait,
-              R.TypeApp(R.TIdentifier(escapeIdent(c.name)), typeParamsAsTypes),
+              fullType,
               "",
               [R.FnDecl(
                  R.PRIV,
-                 R.Fn("default", [], [], Some(R.SelfOwned),
+                 R.Fn("default", [], [], Some(fullType),
                       "",
                       Some(R.StructBuild(
                              structName,
@@ -1574,16 +1594,30 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
                            )))
                )]
             ))];
+        asRefImpl := [
+        R.ImplDecl(
+          R.ImplFor(
+            defaultConstrainedTypeParams,
+            R.std_type.MSel("convert").MSel("AsRef").Apply1(fullType),
+            R.Borrowed(fullType),
+            "",
+            [R.FnDecl(
+                R.PRIV,
+                R.Fn("as_ref", [], [R.Formal.selfBorrowed], Some(R.SelfOwned),
+                    "",
+                    Some(R.self))
+              )]
+          ))];
       }
-
-      s := enumBody + printImpl + defaultImpl;
+      s := enumBody + printImpl + defaultImpl + asRefImpl;
     }
 
     static method GenPath(p: seq<Ident>) returns (r: R.Type) {
       if |p| == 0 {
         return R.SelfOwned;
       } else {
-        r := R.TIdentifier("super");
+        // TODO: Better distinction between Dafny modules and any module
+        r := if p[0].id == "std" then R.TIdentifier("") else R.TIdentifier("super");
         for i := 0 to |p| {
           r := r.MSel(escapeIdent(p[i].id));
         }
@@ -1594,7 +1628,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       if |p| == 0 {
         return R.self;
       } else {
-        r := R.Identifier("super");
+        r := if p[0].id == "std" then R.Identifier("") else R.Identifier("super");
         for i := 0 to |p| {
           r := r.MSel(escapeIdent(p[i].id));
         }
@@ -1805,7 +1839,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
 
       if (!m.isStatic) {
         if (forTrait) {
-          params := [R.Formal.self] + params;
+          params := [R.Formal.selfBorrowed] + params;
         } else {
           var tpe := GenType(enclosingType, false, false);
           params := [R.Formal("self", R.Borrowed(tpe))] + params;
@@ -2531,25 +2565,21 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         match (fromTpe, toTpe) {
           case (Nullable(_), _) => {
             var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
-            var s := recursiveGen.ToString(IND);
+            r := recursiveGen;
             if recOwned == OwnershipOwned {
-              s := s + ".as_ref()";
+              r := r.Sel("as_ref").Apply([]);
             }
-
-            s := s + ".unwrap()";
-            r := R.RawExpr(s);
+            r := r.Sel("unwrap").Apply([]);
             r, resultingOwnership := FromOwnership(r, recOwned, expectedOwnership);
             readIdents := recIdents;
           }
           case (_, Nullable(_)) => {
             var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
-            var s := recursiveGen.ToString(IND);
+            r := recursiveGen;
             if recOwned == OwnershipOwned {
-              s := s + ".clone()";
+              r := r.Sel("clone").Apply([]);
             }
-
-            s := "Some(" + s + ")";
-            r := R.RawExpr(s);
+            r := R.Call(R.Identifier("Some"), [r]);
             r, resultingOwnership := FromOwnership(r, recOwned, expectedOwnership);
             readIdents := recIdents;
           }
@@ -2584,7 +2614,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               if erase {
                 r := recursiveGen;
               } else {
-                r := R.RawExpr(recursiveGen.ToString(IND) + ".0");
+                r := recursiveGen.Sel("0");
               }
               r, resultingOwnership := FromOwnership(r, recOwned, expectedOwnership);
               readIdents := recIdents;
@@ -2645,7 +2675,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           }
           case _ => {
             var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
-            r := R.RawExpr("(" + recursiveGen.ToString(IND) + "/* conversion not yet implemented */)");
+            r := R.RawExpr("(" + recursiveGen.ToString(IND) + "/* <i>Coercion</i> not yet implemented */)");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
           }
@@ -3093,7 +3123,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           var onExpr, onOwned, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           if isDatatype || isConstant {
             r := onExpr.Sel(escapeIdent(field)).Apply([]);
-            r, resultingOwnership := FromOwned(r, expectedOwnership);
+            r, resultingOwnership := FromOwnership(r, OwnershipBorrowed, expectedOwnership);
           } else {
             var s: string;
             s := "::std::ops::Deref::deref(&((" + onExpr.ToString(IND) + ")" + "." + escapeIdent(field) + ".borrow()))";
@@ -3354,7 +3384,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         case TypeTest(on, dType, variant) => {
           var exprGen, _, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           var dTypePath := GenPath(dType);
-          r := R.RawExpr("matches!(" + exprGen.ToString(IND) + ".as_ref(), " + dTypePath.MSel(escapeIdent(variant)).ToString(IND) + "{ .. })");
+          r := R.Identifier("matches!").Apply([exprGen.Sel("as_ref").Apply([]), R.RawExpr(dTypePath.MSel(escapeIdent(variant)).ToString(IND) + "{ .. }")]);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := recIdents;
           return;

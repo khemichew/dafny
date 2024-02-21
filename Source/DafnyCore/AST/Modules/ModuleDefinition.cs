@@ -878,7 +878,7 @@ public class ModuleDefinition : RangeNode, IAttributeBearingDeclaration, IClonea
             } else {
               // either the destructor has no explicit name, or this constructor declared another destructor with this name, or no previous destructor had this name
               dtor = new DatatypeDestructor(formal.RangeToken, ctor, formal, new Name(formal.RangeToken, formal.Name), "dtor_" + formal.CompileName,
-                formal.IsGhost, formal.Type, null);
+                formal.IsGhost, formal.Type, formal.Attributes);
               dtor.InheritVisibility(dt);
               dtor.EnclosingClass = dt; // resolve here
               if (formal.HasName && !localDuplicate && previousMember == null) {
