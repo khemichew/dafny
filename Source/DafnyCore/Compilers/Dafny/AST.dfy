@@ -52,8 +52,10 @@ module {:extern "DAST"} DAST {
 
   datatype Attribute = Attribute(name: string, args: seq<string>)
 
+  datatype DatatypeType = DatatypeType(path: seq<Ident>, attributes: seq<Attribute>)
+
   datatype ResolvedType =
-    | Datatype(path: seq<Ident>, attributes: seq<Attribute>)
+    | Datatype(datatypeType: DatatypeType)
     | Trait(path: seq<Ident>, attributes: seq<Attribute>)
     | Newtype(baseType: Type, range: NewtypeRange, erase: bool, attributes: seq<Attribute>)
 
@@ -131,7 +133,7 @@ module {:extern "DAST"} DAST {
     Tuple(seq<Expression>) |
     New(path: seq<Ident>, typeArgs: seq<Type>, args: seq<Expression>) |
     NewArray(dims: seq<Expression>, typ: Type) |
-    DatatypeValue(path: seq<Ident>, typeArgs: seq<Type>, variant: string, isCo: bool, contents: seq<(string, Expression)>) |
+    DatatypeValue(datatypeType: DatatypeType, typeArgs: seq<Type>, variant: string, isCo: bool, contents: seq<(string, Expression)>) |
     Convert(value: Expression, from: Type, typ: Type) |
     SeqConstruct(length: Expression, elem: Expression) |
     SeqValue(elements: seq<Expression>, typ: Type) |

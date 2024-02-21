@@ -843,6 +843,8 @@ module RAST
     }
   }
 
+  const self := Identifier("self")
+
   const global := Identifier("")
 
   const dafny_runtime := global.MSel("dafny_runtime")
@@ -908,7 +910,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
     "Self","self","static","struct","super","trait","true","type","union",
     "unsafe","use","where","while","Keywords","The","abstract","become",
     "box","do","final","macro","override","priv","try","typeof","unsized",
-    "virtual","yield","u8", "u16", "u32", "u64", "u128","i8", "i16", "i32", "i64", "i128"}
+    "virtual","yield"}
+  const reserved_rust_need_prefix := {"u8", "u16", "u32", "u64", "u128","i8", "i16", "i32", "i64", "i128"}
 
   predicate is_tuple_numeric(i: string) {
     |i| >= 2 && i[0] == '_' &&
@@ -972,7 +975,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
   }
 
   predicate is_idiomatic_rust_id(i: string) {
-    0 < |i| && !has_special(i) && i !in reserved_rust
+    0 < |i| && !has_special(i) && i !in reserved_rust && i !in reserved_rust_need_prefix
   }
 
   function escapeIdent(i: string): string {
@@ -1129,7 +1132,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       s := [R.StructDecl(struct)];
 
       var implBodyRaw, traitBodies := GenClassImplBody(c.body, false, Type.Path([], [],
-        ResolvedType.Datatype(path, c.attributes)), typeParamsSet);
+        ResolvedType.Datatype(DatatypeType(path, c.attributes))), typeParamsSet);
       var implBody :=
         [R.FnDecl(
            R.PUB,
@@ -1167,8 +1170,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               var x := R.ImplDecl(
                 R.ImplFor(
                   sConstrainedTypeParams,
-                  R.TypeApp(R.TIdentifier(pathStr), typeArgs),
-                  R.Rc(R.TypeApp(R.TIdentifier(genSelfPath), typeParamsAsTypes)),
+                  R.TypeApp(pathStr, typeArgs),
+                  R.Rc(R.TypeApp(genSelfPath, typeParamsAsTypes)),
                   whereConstraints,
                   body
                 ));
@@ -1369,7 +1372,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       }
 
       var selfPath := [Ident.Ident(c.name)];
-      var implBodyRaw, traitBodies := GenClassImplBody(c.body, false, Type.Path([], [], ResolvedType.Datatype(selfPath, c.attributes)), typeParamsSet);
+      var implBodyRaw, traitBodies := GenClassImplBody(c.body, false, Type.Path([], [], ResolvedType.Datatype(DatatypeType(selfPath, c.attributes))), typeParamsSet);
       var implBody: seq<R.ImplMember> := implBodyRaw;
       i := 0;
       var emittedFields: set<string> := {};
@@ -1426,7 +1429,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
             }
 
             var methodBody := R.Match(
-              R.RawExpr("self"),
+              R.self,
               cases
             );
 
@@ -1519,7 +1522,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         ];
       }
       var printImplBody := R.Match(
-        R.RawExpr("self"),
+        R.self,
         printImplBodyCases);
       var printImpl := [
         R.ImplDecl(
@@ -1576,21 +1579,24 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       s := enumBody + printImpl + defaultImpl;
     }
 
-    static method GenPath(p: seq<Ident>) returns (s: string) {
+    static method GenPath(p: seq<Ident>) returns (r: R.Type) {
       if |p| == 0 {
-        // TODO(shadaj): this special casing is not great
-        return "Self";
+        return R.SelfOwned;
       } else {
-        s := "super::";
-        var i := 0;
-        while i < |p| {
-          if i > 0 {
-            s := s + "::";
-          }
+        r := R.TIdentifier("super");
+        for i := 0 to |p| {
+          r := r.MSel(escapeIdent(p[i].id));
+        }
+      }
+    }
 
-          s := s + escapeIdent(p[i].id);
-
-          i := i + 1;
+    static method GenPathExpr(p: seq<Ident>) returns (r: R.Expr) {
+      if |p| == 0 {
+        return R.self;
+      } else {
+        r := R.Identifier("super");
+        for i := 0 to |p| {
+          r := r.MSel(escapeIdent(p[i].id));
         }
       }
     }
@@ -1607,24 +1613,28 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
       }
     }
 
+    static predicate IsRcWrapped(attributes: seq<Attribute>) {
+      (Attribute("auto-nongrowing-size", []) !in attributes &&
+       Attribute("rust_rc", ["false"]) !in attributes) ||
+      Attribute("rust_rc", ["true"]) in attributes
+    }
+
     static method GenType(c: Type, inBinding: bool, inFn: bool) returns (s: R.Type) {
       match c {
         case Path(p, args, resolved) => {
           var t := GenPath(p);
-          s := R.TIdentifier(t);
-
           var typeArgs := GenTypeArgs(args, inBinding, inFn);
-          s := R.TypeApp(s, typeArgs);
+          s := R.TypeApp(t, typeArgs);
 
           match resolved {
-            case Datatype(_, attributes) => {
-              if Attribute("auto-non-recursive", []) !in attributes {
+            case Datatype(DatatypeType(_, attributes)) => {
+              if IsRcWrapped(attributes) {
                 s := R.Rc(s);
               }
             }
             case Trait(_, _) => {
               if p == [Ident.Ident("_System"), Ident.Ident("object")] {
-                s := R.RawType("::std::rc::Rc<dyn ::std::any::Any>");
+                s := R.Rc(R.RawType("dyn ::std::any::Any"));
               } else {
                 if inBinding {
                   // impl trait in bindings is not stable
@@ -2681,8 +2691,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case Companion(path) => {
-          var p := GenPath(path);
-          r := R.RawExpr(p);
+          r := GenPathExpr(path);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := {};
           return;
@@ -2718,36 +2727,27 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           return;
         }
         case New(path, typeArgs, args) => {
-          var path := GenPath(path);
           // TODO(Mikael) Use allocate(...) here.
-          var s := "::std::rc::Rc::new(" + path;
+          r := GenPathExpr(path);
           if |typeArgs| > 0 {
-            var i := 0;
             var typeExprs := [];
-            while i < |typeArgs| {
+            for i := 0 to |typeArgs| {
               var typeExpr := GenType(typeArgs[i], false, false);
               typeExprs := typeExprs + [typeExpr];
-
-              i := i + 1;
             }
-            s := s + R.TypeApp(R.TIdentifier("::"), typeExprs).ToString(IND);
+            r := r.ApplyType(typeExprs);
           }
-          s := s + "::new(";
+          r := r.MSel("new");
+
           readIdents := {};
-          var i := 0;
-          while i < |args| {
-            if i > 0 {
-              s := s + ", ";
-            }
-
+          var arguments := [];
+          for i := 0 to |args| {
             var recursiveGen, _, recIdents := GenExpr(args[i], selfIdent, env, OwnershipOwned);
-            s := s + recursiveGen.ToString(IND);
+            arguments := arguments + [recursiveGen];
             readIdents := readIdents + recIdents;
-
-            i := i + 1;
           }
-          s := s + "))";
-          r := R.RawExpr(s);
+          r := r.Apply(arguments);
+          r := R.RcNew(r);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
@@ -2770,17 +2770,12 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
-        case DatatypeValue(path, typeArgs, variant, isCo, values) => {
-          var path := GenPath(path);
-          r := R.RawExpr(path);
+        case DatatypeValue(datatypeType, typeArgs, variant, isCo, values) => {
+          r := GenPathExpr(datatypeType.path);
           var genTypeArgs := [];
-          var i := 0;
-          while i < |typeArgs| {
-
+          for i := 0 to |typeArgs| {
             var typeExpr := GenType(typeArgs[i], false, false);
             genTypeArgs := genTypeArgs + [typeExpr];
-
-            i := i + 1;
           }
           if |typeArgs| > 0 {
             r := r.ApplyType(genTypeArgs);
@@ -2788,9 +2783,8 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           r := r.MSel(escapeIdent(variant));
           readIdents := {};
 
-          i := 0;
           var assignments: seq<R.AssignIdentifier> := [];
-          while i < |values| {
+          for i := 0 to |values| {
             var (name, value) := values[i];
 
             if isCo {
@@ -2811,10 +2805,11 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               assignments := assignments + [R.AssignIdentifier(escapeIdent(name), recursiveGen)];
               readIdents := readIdents + recIdents;
             }
-            i := i + 1;
           }
           r := R.StructBuild(r, assignments);
-          r := R.RcNew(r);
+          if IsRcWrapped(datatypeType.attributes) {
+            r := R.RcNew(r);
+          }
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           return;
         }
@@ -3359,7 +3354,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         case TypeTest(on, dType, variant) => {
           var exprGen, _, recIdents := GenExpr(on, selfIdent, env, OwnershipBorrowed);
           var dTypePath := GenPath(dType);
-          r := R.RawExpr("matches!(" + exprGen.ToString(IND) + ".as_ref(), " + dTypePath + "::" + escapeIdent(variant) + "{ .. })");
+          r := R.RawExpr("matches!(" + exprGen.ToString(IND) + ".as_ref(), " + dTypePath.MSel(escapeIdent(variant)).ToString(IND) + "{ .. })");
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := recIdents;
           return;

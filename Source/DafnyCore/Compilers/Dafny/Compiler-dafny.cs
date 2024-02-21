@@ -222,7 +222,10 @@ namespace Microsoft.Dafny.Compilers {
           typeParams.Add((DAST.Type)DAST.Type.create_TypeArg(Sequence<Rune>.UnicodeFromString(compileName)));
         }
 
-        return new ClassWriter(this, typeParams.Count > 0, builder.Class(name, moduleName, typeParams, superClasses.Select(t => GenType(t)).ToList()));
+        return new ClassWriter(this, typeParams.Count > 0, builder.Class(
+          name, moduleName, typeParams, superClasses.Select(t => GenType(t)).ToList(),
+          ParseAttributes(cls.Attributes))
+          );
       } else {
         throw new InvalidOperationException();
       }
@@ -237,7 +240,7 @@ namespace Microsoft.Dafny.Compilers {
           typeParams.Add((DAST.Type)DAST.Type.create_TypeArg(Sequence<Rune>.UnicodeFromString(IdProtect(tp.GetCompileName(Options)))));
         }
 
-        return new ClassWriter(this, typeParameters.Any(), builder.Trait(name, typeParams));
+        return new ClassWriter(this, typeParameters.Any(), builder.Trait(name, typeParams, ParseAttributes(trait.Attributes)));
       } else {
         throw new InvalidOperationException();
       }
@@ -291,7 +294,8 @@ namespace Microsoft.Dafny.Compilers {
           dt.EnclosingModuleDefinition.GetCompileName(Options),
           typeParams,
           ctors,
-          dt is CoDatatypeDecl
+          dt is CoDatatypeDecl,
+          ParseAttributes(dt.Attributes)
         ));
       } else {
         throw new InvalidOperationException("Cannot declare datatype outside of a module: " + currentBuilder);
@@ -317,7 +321,7 @@ namespace Microsoft.Dafny.Compilers {
 
         return new ClassWriter(this, false, builder.Newtype(
           nt.GetCompileName(Options), new(),
-          GenType(nt.BaseType), NativeTypeToNewtypeRange(nt.NativeType), witnessStmts, witness));
+          GenType(nt.BaseType), NativeTypeToNewtypeRange(nt.NativeType), witnessStmts, witness, ParseAttributes(nt.Attributes)));
       } else {
         throw new InvalidOperationException();
       }
@@ -414,7 +418,7 @@ namespace Microsoft.Dafny.Compilers {
         }
 
         builder.Newtype(sst.GetCompileName(Options), typeParams,
-          GenType(erasedType), (NewtypeRange)NewtypeRange.create_NoRange(), witnessStmts, witness).Finish();
+          GenType(erasedType), (NewtypeRange)NewtypeRange.create_NoRange(), witnessStmts, witness, ParseAttributes(sst.Attributes)).Finish();
       } else {
         throw new InvalidOperationException();
       }
@@ -1432,6 +1436,35 @@ namespace Microsoft.Dafny.Compilers {
       });
     }
 
+    private ISequence<DAST.Attribute> ParseAttributes(Attributes attributes) {
+      var a = attributes;
+      var result = new List<DAST.Attribute>() { };
+      while (a != null) {
+        var name = Sequence<Rune>.UnicodeFromString(a.Name);
+        var args = new List<Sequence<Rune>>();
+        foreach (var arg in a.Args) {
+          if (arg is Dafny.LiteralExpr { Value: var value }) {
+            var argToAdd = "";
+            if (value is string s) {
+              argToAdd = s;
+            } else if (value is bool b) {
+              argToAdd = b ? "true" : "false";
+            } else if (value is BigInteger big) {
+              argToAdd = big.ToString();
+            } else {
+              argToAdd = "unknown " + value.GetType();
+            }
+            args.Add((Sequence<Rune>)Sequence<Rune>.UnicodeFromString(argToAdd));
+          }
+        }
+        result.Add((DAST.Attribute)DAST.Attribute.create_Attribute(name, 
+          Sequence<Sequence<Rune>>.FromArray(args.ToArray())));
+        a = a.Prev;
+      }
+
+      return Sequence<DAST.Attribute>.FromArray(result.ToArray());
+    }
+
     private DAST.Type TypeNameASTFromTopLevel(TopLevelDecl topLevel, List<Type> typeArgs) {
       var path = PathFromTopLevel(topLevel);
 
@@ -1446,23 +1479,25 @@ namespace Microsoft.Dafny.Compilers {
       if (topLevel is NewtypeDecl newType) {
         var range = NativeTypeToNewtypeRange(newType.NativeType);
         resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Newtype(
-          GenType(EraseNewtypeLayers(topLevel)), range, true);
+          GenType(EraseNewtypeLayers(topLevel)), range, true, ParseAttributes(newType.Attributes));
       } else if (topLevel is TypeSynonymDecl typeSynonym) {
-        resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Newtype(GenType(EraseNewtypeLayers(topLevel)), NewtypeRange.create_NoRange(), true);
+        resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Newtype(
+          GenType(EraseNewtypeLayers(topLevel)), NewtypeRange.create_NoRange(), true, ParseAttributes(typeSynonym.Attributes));
       } else if (topLevel is TraitDecl) {
         ThrowSpecificUnsupported(Token.NoToken, Feature.Traits);
         resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Newtype(
           DAST.Type.create_Passthrough(Sequence<Rune>.UnicodeFromString("<b>Unsupported: <i>Traits</i></b>")),
-          NewtypeRange.create_NoRange(), true
+          NewtypeRange.create_NoRange(), true, ParseAttributes(topLevel.Attributes)
         );
         // traits need a bit more work
 
         // resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Trait(path);
       } else if (topLevel is DatatypeDecl) {
-        resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Datatype(path);
+        resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Datatype(
+          (DatatypeType)DatatypeType.create_DatatypeType(path, ParseAttributes(topLevel.Attributes)));
       } else if (topLevel is ClassDecl) {
         // TODO(Mikael): have a separate type when we properly support classes
-        resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Datatype(path);
+        resolvedType = (DAST.ResolvedType)DAST.ResolvedType.create_Datatype((DatatypeType)DatatypeType.create_DatatypeType(path, ParseAttributes(topLevel.Attributes)));
       } else {
         // SubsetTypeDecl are covered by TypeSynonymDecl
         throw new InvalidOperationException(topLevel.GetType().ToString());
@@ -1626,7 +1661,7 @@ namespace Microsoft.Dafny.Compilers {
           var dtPath = PathFromTopLevel(dtv.Ctor.EnclosingDatatype);
           var dtTypeArgs = Sequence<DAST.Type>.FromArray(dtv.InferredTypeArgs.Select(m => GenType(m)).ToArray());
           builder.Builder.AddExpr((DAST.Expression)DAST.Expression.create_DatatypeValue(
-            dtPath,
+            (DatatypeType)DatatypeType.create_DatatypeType(dtPath, ParseAttributes(dtv.Ctor.EnclosingDatatype.Attributes)),
             dtTypeArgs,
             Sequence<Rune>.UnicodeFromString(dtv.Ctor.GetCompileName(Options)),
             dtv.Ctor.EnclosingDatatype is CoDatatypeDecl,

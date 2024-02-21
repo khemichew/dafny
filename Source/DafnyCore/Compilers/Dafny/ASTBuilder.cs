@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Microsoft.CodeAnalysis;
 using Microsoft.Dafny.Compilers;
 using Std.Wrappers;
+using Attribute = DAST.Attribute;
 
 namespace Microsoft.Dafny.Compilers {
 
@@ -92,10 +93,12 @@ namespace Microsoft.Dafny.Compilers {
   interface ClassContainer : UnsupportedContainer {
     void AddClass(Class item);
 
-    public ClassBuilder Class(string name, string enclosingModule, List<DAST.Type> typeParams, List<DAST.Type> superClasses) {
-      return new ClassBuilder(this, name, enclosingModule, typeParams, superClasses);
+    public ClassBuilder Class(string name, string enclosingModule, List<DAST.Type> typeParams, List<DAST.Type> superClasses, ISequence<_IAttribute> attributes) {
+      return new ClassBuilder(this, name, enclosingModule, typeParams, superClasses, attributes);
     }
   }
+  
+  
 
   class ClassBuilder : ClassLike {
     readonly ClassContainer parent;
@@ -105,13 +108,15 @@ namespace Microsoft.Dafny.Compilers {
     readonly List<DAST.Type> superClasses;
     readonly List<DAST.Field> fields = new();
     readonly List<DAST.Method> body = new();
+    readonly ISequence<_IAttribute> attributes;
 
-    public ClassBuilder(ClassContainer parent, string name, string enclosingModule, List<DAST.Type> typeParams, List<DAST.Type> superClasses) {
+    public ClassBuilder(ClassContainer parent, string name, string enclosingModule, List<DAST.Type> typeParams, List<DAST.Type> superClasses, ISequence<_IAttribute> attributes) {
       this.parent = parent;
       this.name = name;
       this.enclosingModule = enclosingModule;
       this.typeParams = typeParams;
       this.superClasses = superClasses;
+      this.attributes = attributes;
     }
 
     public void AddMethod(DAST.Method item) {
@@ -129,7 +134,8 @@ namespace Microsoft.Dafny.Compilers {
         Sequence<DAST.Type>.FromArray(this.typeParams.ToArray()),
         Sequence<DAST.Type>.FromArray(this.superClasses.ToArray()),
         Sequence<DAST.Field>.FromArray(this.fields.ToArray()),
-        Sequence<DAST.Method>.FromArray(body.ToArray())
+        Sequence<DAST.Method>.FromArray(body.ToArray()),
+        attributes
       ));
       return parent;
     }
@@ -138,8 +144,8 @@ namespace Microsoft.Dafny.Compilers {
   interface TraitContainer : UnsupportedContainer {
     void AddTrait(Trait item);
 
-    public TraitBuilder Trait(string name, List<DAST.Type> typeParams) {
-      return new TraitBuilder(this, name, typeParams);
+    public TraitBuilder Trait(string name, List<DAST.Type> typeParams, ISequence<_IAttribute> attributes) {
+      return new TraitBuilder(this, name, typeParams, attributes);
     }
   }
 
@@ -148,11 +154,13 @@ namespace Microsoft.Dafny.Compilers {
     readonly string name;
     readonly List<DAST.Type> typeParams;
     readonly List<DAST.Method> body = new();
+    private ISequence<_IAttribute> attributes;
 
-    public TraitBuilder(TraitContainer parent, string name, List<DAST.Type> typeParams) {
+    public TraitBuilder(TraitContainer parent, string name, List<DAST.Type> typeParams, ISequence<_IAttribute> attributes) {
       this.parent = parent;
       this.name = name;
       this.typeParams = typeParams;
+      this.attributes = attributes;
     }
 
     public void AddMethod(DAST.Method item) {
@@ -175,7 +183,8 @@ namespace Microsoft.Dafny.Compilers {
       parent.AddTrait((Trait)Trait.create(
         Sequence<Rune>.UnicodeFromString(this.name),
         Sequence<DAST.Type>.FromArray(typeParams.ToArray()),
-        Sequence<DAST.Method>.FromArray(body.ToArray()))
+        Sequence<DAST.Method>.FromArray(body.ToArray()),
+        attributes)
       );
       return parent;
     }
@@ -185,8 +194,9 @@ namespace Microsoft.Dafny.Compilers {
     void AddNewtype(Newtype item);
 
     public NewtypeBuilder Newtype(string name, List<DAST.Type> typeParams,
-      DAST.Type baseType, DAST.NewtypeRange newtypeRange, List<DAST.Statement> witnessStmts, DAST.Expression witness) {
-      return new NewtypeBuilder(this, name, typeParams, newtypeRange, baseType, witnessStmts, witness);
+      DAST.Type baseType, NewtypeRange newtypeRange, List<DAST.Statement> witnessStmts, DAST.Expression witness,
+      ISequence<_IAttribute> attributes) {
+      return new NewtypeBuilder(this, name, typeParams, newtypeRange, baseType, witnessStmts, witness, attributes);
     }
   }
 
@@ -198,9 +208,10 @@ namespace Microsoft.Dafny.Compilers {
     private readonly DAST.NewtypeRange newtypeRange;
     readonly List<DAST.Statement> witnessStmts;
     readonly DAST.Expression witness;
+    private ISequence<_IAttribute> attributes;
 
     public NewtypeBuilder(NewtypeContainer parent, string name, List<DAST.Type> typeParams,
-      DAST.NewtypeRange newtypeRange, DAST.Type baseType, List<DAST.Statement> statements, DAST.Expression witness) {
+      DAST.NewtypeRange newtypeRange, DAST.Type baseType, List<DAST.Statement> statements, DAST.Expression witness, ISequence<_IAttribute> attributes) {
       this.parent = parent;
       this.name = name;
       this.typeParams = typeParams;
@@ -208,6 +219,7 @@ namespace Microsoft.Dafny.Compilers {
       this.baseType = baseType;
       this.witnessStmts = statements;
       this.witness = witness;
+      this.attributes = attributes;
     }
 
     public void AddMethod(DAST.Method item) {
@@ -225,7 +237,8 @@ namespace Microsoft.Dafny.Compilers {
         this.baseType,
         newtypeRange,
         Sequence<DAST.Statement>.FromArray(this.witnessStmts.ToArray()),
-        this.witness == null ? Option<DAST._IExpression>.create_None() : Option<DAST._IExpression>.create_Some(this.witness)
+        this.witness == null ? Option<DAST._IExpression>.create_None() : Option<DAST._IExpression>.create_Some(this.witness),
+        attributes
       ));
       return parent;
     }
@@ -234,8 +247,9 @@ namespace Microsoft.Dafny.Compilers {
   interface DatatypeContainer : UnsupportedContainer {
     void AddDatatype(Datatype item);
 
-    public DatatypeBuilder Datatype(string name, string enclosingModule, List<DAST.Type> typeParams, List<DAST.DatatypeCtor> ctors, bool isCo) {
-      return new DatatypeBuilder(this, name, enclosingModule, typeParams, ctors, isCo);
+    public DatatypeBuilder Datatype(string name, string enclosingModule, List<DAST.Type> typeParams,
+      List<DAST.DatatypeCtor> ctors, bool isCo, ISequence<_IAttribute> attributes) {
+      return new DatatypeBuilder(this, name, enclosingModule, typeParams, ctors, isCo, attributes);
     }
   }
 
@@ -247,14 +261,16 @@ namespace Microsoft.Dafny.Compilers {
     readonly List<DAST.DatatypeCtor> ctors;
     readonly bool isCo;
     readonly List<DAST.Method> body = new();
+    private ISequence<_IAttribute> attributes;
 
-    public DatatypeBuilder(DatatypeContainer parent, string name, string enclosingModule, List<DAST.Type> typeParams, List<DAST.DatatypeCtor> ctors, bool isCo) {
+    public DatatypeBuilder(DatatypeContainer parent, string name, string enclosingModule, List<DAST.Type> typeParams, List<DAST.DatatypeCtor> ctors, bool isCo, ISequence<_IAttribute> attributes) {
       this.parent = parent;
       this.name = name;
       this.typeParams = typeParams;
       this.enclosingModule = enclosingModule;
       this.ctors = ctors;
       this.isCo = isCo;
+      this.attributes = attributes;
     }
 
     public void AddMethod(DAST.Method item) {
@@ -272,7 +288,7 @@ namespace Microsoft.Dafny.Compilers {
         Sequence<DAST.Type>.FromArray(typeParams.ToArray()),
         Sequence<DAST.DatatypeCtor>.FromArray(ctors.ToArray()),
         Sequence<DAST.Method>.FromArray(body.ToArray()),
-        this.isCo
+        this.isCo, attributes
       ));
       return parent;
     }
