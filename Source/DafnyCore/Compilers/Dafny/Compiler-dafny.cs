@@ -1251,16 +1251,10 @@ namespace Microsoft.Dafny.Compilers {
 
         switch (e) {
           case CharLiteralExpr c:
-            if (UnicodeCharEnabled) {
-              var codePoint = Util.UnescapedCharacters(Options, (string)c.Value, false).Single();
-              baseExpr = (DAST.Expression)DAST.Expression.create_Literal(DAST.Literal.create_CharLiteral(
-                new Rune(codePoint)
-              ));
-            } else {
-              throwGeneralUnsupported("<i>Char literal without unicode char enabled</i>");
-              return;
-              throw new InvalidOperationException();
-            }
+            var codePoint = Util.UnescapedCharacters(Options, (string)c.Value, false).Single();
+            baseExpr = (DAST.Expression)DAST.Expression.create_Literal(DAST.Literal.create_CharLiteral(
+              new Rune(codePoint)
+            ));
             break;
           case StringLiteralExpr str:
             baseExpr = (DAST.Expression)DAST.Expression.create_Literal(DAST.Literal.create_StringLiteral(
@@ -2232,7 +2226,7 @@ namespace Microsoft.Dafny.Compilers {
             }
         }
       } else {
-        throwGeneralUnsupported("<i>UnaryExpr " + op + "</i>");
+        throwGeneralUnsupported("<i>UnaryExpr " + op + " without expr container</i>");
       }
     }
 

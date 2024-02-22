@@ -457,7 +457,6 @@ module RAST
     | TypeAscription(left: Expr, tpe: Type)          // underlying as tpe
     | LiteralInt(value: string)
     | LiteralString(value: string, binary: bool)
-    | ConversionNum(tpe: Type, underlying: Expr)     // underlying.convert_to(tpe)
     | DeclareVar(declareType: DeclareType, name: string, optType: Option<Type>, optRhs: Option<Expr>) // let mut name: optType = optRhs;
     | AssignVar(name: string, rhs: Expr)             // name = rhs;
     | IfExpr(cond: Expr, thn: Expr, els: Expr)       // if cond { thn } else { els }
@@ -523,7 +522,6 @@ module RAST
         case Identifier(_) => 1
         case LiteralInt(_) => 1
         case LiteralString(_, _) => 1
-        case ConversionNum(_, underlying) => 1 + underlying.Height()
         case Match(matchee, cases) =>
           1 + max(matchee.Height(),
                   SeqToHeight(cases, (oneCase: MatchCase)
@@ -623,9 +621,12 @@ module RAST
           assert BinaryOp("<=", right, left, BinOpFormat.NoFormat()).Height()
               == BinaryOp("<", left, right, BinOpFormat.ReverseOperands()).Height();
           BinaryOp("<=", right, left, BinOpFormat.NoFormat())
-
-        case ConversionNum(tpe, expr) =>
-          if || tpe.U8? || tpe.U16? || tpe.U32? || tpe.U64? || tpe.U128?
+        case CallType(CallType(Select(expr, "into"), tpes), args) =>
+          if |tpes| != 1 || |args| != 0 then this
+          else 
+            var tpe := tpes[0];
+            if
+             || tpe.U8? || tpe.U16? || tpe.U32? || tpe.U64? || tpe.U128?
              || tpe.I8? || tpe.I16? || tpe.I32? || tpe.I64? || tpe.I128? then
             match expr {
               case Call(MemberSelect(
@@ -701,19 +702,13 @@ module RAST
         case LiteralString(characters, binary) =>
           (if binary then "b" else "") +
           "\"" + characters + "\""
-        case ConversionNum(tpe, expr) =>
-          if || tpe.U8? || tpe.U16? || tpe.U32? || tpe.U64? || tpe.U128?
-             || tpe.I8? || tpe.I16? || tpe.I32? || tpe.I64? || tpe.I128? then
-            "num::ToPrimitive::to_"+tpe.ToString(ind)+"(" + expr.ToString(ind) + ").unwrap()"
-          else
-            "<b>Unsupported: Numeric conversion to " + tpe.ToString(ind) + "</b>"
         case Match(matchee, cases) =>
           "match " + matchee.ToString(ind + IND) + " {" +
           SeqToString(cases,
                       (c: MatchCase) requires c.Height() < this.Height() =>
                         "\n" + ind + IND + c.ToString(ind + IND), ",") +
           "\n" + ind + "}"
-        case StmtExpr(stmt, rhs) => // They are built like StmtExpr(StmtExpr(StmtExpr(..., 1), 2), 3...)
+        case StmtExpr(stmt, rhs) => // They are built like StmtExpr(1, StmtExpr(2, StmtExpr(3, ...)))
           if stmt.RawExpr? && stmt.content == "" then rhs.ToString(ind) else
           stmt.ToString(ind) + (if stmt.NoExtraSemicolonAfter() then "" else ";") +
           "\n" + ind + rhs.ToString(ind)
@@ -1009,6 +1004,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
   datatype Ownership = OwnershipOwned | OwnershipBorrowed | OwnershipBorrowedMut | OwnershipAutoBorrowed
 
   const DafnyChar := if UnicodeChars then "DafnyChar" else "DafnyCharUTF16"
+  const DafnyCharUnderlying := if UnicodeChars then R.RawType("char") else R.RawType("u16")
 
   // Mapping from names to their ownership with which they were assigned.
   // fn Test(i: T) is map["i" := OwnershipOwned]
@@ -2376,17 +2372,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
         }
         case Literal(CharLiteral(c)) => {
           r := R.LiteralInt(Strings.OfNat(c as nat));
-          if !UnicodeChars {
-            r := 
-              R.global.MSel("std").MSel("primitive")
-              .MSel("char").MSel("from_u16")
-              .Apply1(r).Sel("unwrap").Apply([]);
-          } else {
-            r := 
-              R.global.MSel("std").MSel("primitive")
-              .MSel("char").MSel("from_u32")
-              .Apply1(r).Sel("unwrap").Apply([]);
-          }
+          r := R.TypeAscription(r, DafnyCharUnderlying);
           r := R.dafny_runtime.MSel(DafnyChar).Apply1(r);
           r, resultingOwnership := FromOwned(r, expectedOwnership);
           readIdents := {};
@@ -2585,13 +2571,13 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           }
           case (_, Path(_, _, Newtype(b, range, erase, attributes))) => {
             assert {:split_here} true;
+            var nativeToType := NewtypeToRustType(b, range);
             if fromTpe == b {
               var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
 
-              var potentialRhsType := NewtypeToRustType(b, range);
-              match potentialRhsType {
+              match nativeToType {
                 case Some(v) =>
-                  r := R.ConversionNum(v, recursiveGen);
+                  r := recursiveGen.Sel("into").ApplyType([v]).Apply([]);
                   r, resultingOwnership := FromOwned(r, expectedOwnership);
                 case None =>
                   if erase {
@@ -2604,21 +2590,63 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
               }
               readIdents := recIdents;
             } else {
+              if nativeToType.Some? {
+                // Conversion between any newtypes that can be expressed as a native Rust type
+                match fromTpe {
+                  case Path(_, _, Newtype(b0, range0, erase0, attributes0)) => {
+                    var nativeFromType := NewtypeToRustType(b0, range0);
+
+                    if nativeFromType.Some? {
+                      var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
+                      r, resultingOwnership := FromOwnership(R.TypeAscription(recursiveGen, nativeToType.value), recOwned, expectedOwnership);
+                      readIdents := recIdents;
+                      return;
+                    }
+                  }
+                  case _ =>
+                }
+                if fromTpe == Primitive(Char) {
+                  var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
+                  r, resultingOwnership := FromOwnership(R.TypeAscription(recursiveGen.Sel("0"), nativeToType.value), recOwned, expectedOwnership);
+                  readIdents := recIdents;
+                  return;
+                }
+              }
               assume {:axiom} Convert(Convert(expr, fromTpe, b), b, toTpe) < e; // make termination go through
               r, resultingOwnership, readIdents := GenExpr(Convert(Convert(expr, fromTpe, b), b, toTpe), selfIdent, env, expectedOwnership);
             }
           }
           case (Path(_, _, Newtype(b, range, erase, attributes)), _) => {
+            var nativeFromType := NewtypeToRustType(b, range);
             if b == toTpe {
               var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
-              if erase {
-                r := recursiveGen;
-              } else {
-                r := recursiveGen.Sel("0");
+              match nativeFromType {
+                case Some(v) =>
+                  var toTpeRust := GenType(toTpe, false, false);
+                  r := recursiveGen.Sel("into").ApplyType([toTpeRust]).Apply([]);
+                  r, resultingOwnership := FromOwned(r, expectedOwnership);
+                case None =>
+                  if erase {
+                    r := recursiveGen;
+                  } else {
+                    r := recursiveGen.Sel("0");
+                  }
+                  r, resultingOwnership := FromOwnership(r, recOwned, expectedOwnership);
+                  readIdents := recIdents;
               }
-              r, resultingOwnership := FromOwnership(r, recOwned, expectedOwnership);
-              readIdents := recIdents;
             } else {
+              if nativeFromType.Some? {
+                // The case where toTpe is a NewType which compiles to a native integer has already been handled.
+                if toTpe == Primitive(Char) {
+                  var recursiveGen, recOwned, recIdents := GenExpr(expr, selfIdent, env, expectedOwnership);
+                  r, resultingOwnership := FromOwnership(
+                    R.dafny_runtime.MSel(DafnyChar).Apply1(
+                      R.TypeAscription(recursiveGen, DafnyCharUnderlying)
+                    ), recOwned, expectedOwnership);
+                  readIdents := recIdents;
+                  return;
+                }
+              }
               assume {:axiom} Convert(Convert(expr, fromTpe, b), b, toTpe) < e; // make termination go through
               r, resultingOwnership, readIdents := GenExpr(Convert(Convert(expr, fromTpe, b), b, toTpe), selfIdent, env, expectedOwnership);
             }
@@ -2660,7 +2688,7 @@ abstract module {:extern "DafnyToRustCompilerAbstract"} DafnyToRustCompilerAbstr
           case (Primitive(Char), Primitive(Int)) => {
             var rhsType := GenType(fromTpe, true, false);
             var recursiveGen, _, recIdents := GenExpr(expr, selfIdent, env, OwnershipOwned);
-            r := R.RawExpr("::dafny_runtime::DafnyInt{data: ::BigInt::from(" + recursiveGen.ToString(IND) + " as u32)}");
+            r := R.RawExpr("::dafny_runtime::DafnyInt{data: ::dafny_runtime::BigInt::from(" + recursiveGen.ToString(IND) + " as u32)}");
             r, resultingOwnership := FromOwned(r, expectedOwnership);
             readIdents := recIdents;
           }
@@ -3479,6 +3507,6 @@ module {:extern "DCOMP"} DafnyToRustCompiler refines DafnyToRustCompilerAbstract
   const UnicodeChars := true
 }
 module {:extern "DCOMPUTF16"} DafnyToRustCompilerUTF16 refines DafnyToRustCompilerAbstract {
-  const UnicodeChars := true
+  const UnicodeChars := false
 }
 

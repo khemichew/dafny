@@ -32,7 +32,7 @@ public class RustBackend : DafnyExecutableBackend {
     $"{Path.GetFileNameWithoutExtension(dafnyProgramName)}-rust/src";
 
   protected override DafnyWrittenCompiler CreateDafnyWrittenCompiler() {
-    return new RustCompiler();
+    return new RustCompiler(Options);
   }
 
   private string ComputeExeName(string targetFilename) {
