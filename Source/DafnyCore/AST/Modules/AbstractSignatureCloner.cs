@@ -1,5 +1,5 @@
 namespace Microsoft.Dafny;
-
+public 
 class AbstractSignatureCloner : ScopeCloner {
 
   public AbstractSignatureCloner(VisibilityScope scope)

@@ -8,16 +8,42 @@
 using System;
 using System.Numerics;
 using System.Collections;
-
-namespace D2DPrettyPrinter {
-
-  public partial class __default {
-    public static Dafny.ISequence<Dafny.Rune> PrettyPrint(Dafny.ISequence<DAST._IModule> d)
+namespace MutateCSharp
+{
+    internal class Schemata273
     {
-      Dafny.ISequence<Dafny.Rune> s = Dafny.Sequence<Dafny.Rune>.Empty;
-      Microsoft.Dafny.Compilers.WrapException.Throw();
-      s = Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Not Implemented Yet");
-      return s;
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT273");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
+
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
+        }
+        internal static string ReplaceStringConstant_0(long mutantId, string argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return string.Empty; }
+            return argument1;
+        }
+
     }
-  }
+}
+
+namespace D2DPrettyPrinter
+{
+
+    public partial class __default
+    {
+        public static Dafny.ISequence<Dafny.Rune> PrettyPrint(Dafny.ISequence<DAST._IModule> d)
+        {
+            Dafny.ISequence<Dafny.Rune> s = Dafny.Sequence<Dafny.Rune>.Empty;
+            Microsoft.Dafny.Compilers.WrapException.Throw();
+            s = Dafny.Sequence<Dafny.Rune>.UnicodeFromString(MutateCSharp.Schemata273.ReplaceStringConstant_0(1L, "Not Implemented Yet"));
+            return s;
+        }
+    }
 } // end of namespace D2DPrettyPrinter

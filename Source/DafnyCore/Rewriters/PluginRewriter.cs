@@ -1,5 +1,5 @@
 namespace Microsoft.Dafny;
-
+public 
 class PluginRewriter : IRewriter {
   private Plugins.Rewriter internalRewriter;
 

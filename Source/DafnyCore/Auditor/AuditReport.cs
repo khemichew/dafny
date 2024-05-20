@@ -3,203 +3,279 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Policy;
 using System.Text;
+namespace MutateCSharp
+{
+    internal class Schemata213
+    {
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT213");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
 
-namespace Microsoft.Dafny.Auditor;
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
+        }
+        internal static string ReplaceStringConstant_0(long mutantId, string argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return string.Empty; }
+            return argument1;
+        }
 
-/// <summary>
-/// Represents an audit report of a Dafny program, ultimately intended to give an overview of
-/// the final assurance argument for the verification of that program. For the moment, it consists
-/// of a set of assumptions that can be rendered in several formats.
-/// </summary>
-public class AuditReport {
-  private DafnyOptions options;
-  private Dictionary<Declaration, IEnumerable<Assumption>> allAssumptionsByDecl = new();
-
-  // All three fields below are filtered by AddAssumptions()
-  private HashSet<Declaration> declsWithEntries = new();
-  private HashSet<ModuleDefinition> modulesWithEntries = new();
-  private Dictionary<Declaration, IEnumerable<Assumption>> assumptionsByDecl = new();
-
-  public AuditReport(DafnyOptions options) {
-    this.options = options;
-  }
-
-  private void UseDecl(Declaration decl) {
-    declsWithEntries.Add(decl);
-    switch (decl) {
-      case MemberDecl memberDecl:
-        UseDecl(memberDecl.EnclosingClass);
-        break;
-      case TopLevelDeclWithMembers topDecl:
-        modulesWithEntries.Add(topDecl.EnclosingModuleDefinition);
-        break;
     }
-  }
-  public void AddAssumptions(Declaration decl, IEnumerable<Assumption> assumptions) {
-    var explicitAssumptions = assumptions.Where(a => a.desc.IsExplicit);
-    var assumptionsToAdd = explicitAssumptions.Any() ? explicitAssumptions : assumptions;
-    if (assumptionsToAdd.Any()) {
-      assumptionsByDecl.Add(decl, assumptionsToAdd);
-      UseDecl(decl);
-    }
-  }
+}
 
-  public IEnumerable<KeyValuePair<Declaration, IEnumerable<Assumption>>> AllAssumptions() {
-    return assumptionsByDecl;
-  }
+namespace Microsoft.Dafny.Auditor
+{
 
-  public IEnumerable<Assumption> AllAssumptionsForDecl(Declaration decl) {
-    return allAssumptionsByDecl.TryGetValue(decl, out var assumptions)
-      ? assumptions : Enumerable.Empty<Assumption>();
-  }
+    /// <summary>
+    /// Represents an audit report of a Dafny program, ultimately intended to give an overview of
+    /// the final assurance argument for the verification of that program. For the moment, it consists
+    /// of a set of assumptions that can be rendered in several formats.
+    /// </summary>
+    public class AuditReport
+    {
+        private DafnyOptions options;
+        private Dictionary<Declaration, IEnumerable<Assumption>> allAssumptionsByDecl = new();
 
-  private string RenderRow(string beg, string sep, string end, IEnumerable<string> cells) {
-    return beg + String.Join(sep, cells) + end + "\n";
-  }
+        // All three fields below are filtered by AddAssumptions()
+        private HashSet<Declaration> declsWithEntries = new();
+        private HashSet<ModuleDefinition> modulesWithEntries = new();
+        private Dictionary<Declaration, IEnumerable<Assumption>> assumptionsByDecl = new();
 
-  private string GetFullName(Declaration decl) {
-    if (decl is MemberDecl m) {
-      return m.FullDafnyName;
-    } else if (decl is ModuleDecl mod) {
-      return mod.FullDafnyName;
-    } else if (decl is TopLevelDecl tld) {
-      return tld.FullDafnyName;
-    } else {
-      return decl.Name;
-    }
-  }
-  private IEnumerable<string> IssueRow(Declaration decl, Assumption a, string issue, string mitigation, Func<string, string> targetFormatter) {
-    return new List<string>() {
+        public AuditReport(DafnyOptions options)
+        {
+            this.options = options;
+        }
+
+        private void UseDecl(Declaration decl)
+        {
+            declsWithEntries.Add(decl);
+            switch (decl)
+            {
+                case MemberDecl memberDecl:
+                    UseDecl(memberDecl.EnclosingClass);
+                    break;
+                    break;
+                case TopLevelDeclWithMembers topDecl:
+                    modulesWithEntries.Add(topDecl.EnclosingModuleDefinition);
+                    break;
+                    break;
+            }
+        }
+        public void AddAssumptions(Declaration decl, IEnumerable<Assumption> assumptions)
+        {
+            var explicitAssumptions = assumptions.Where(a => a.desc.IsExplicit);
+            var assumptionsToAdd = explicitAssumptions.Any() ? explicitAssumptions : assumptions;
+            if (assumptionsToAdd.Any())
+            {
+                assumptionsByDecl.Add(decl, assumptionsToAdd);
+                UseDecl(decl);
+            }
+        }
+
+        public IEnumerable<KeyValuePair<Declaration, IEnumerable<Assumption>>> AllAssumptions()
+        {
+            return assumptionsByDecl;
+        }
+
+        public IEnumerable<Assumption> AllAssumptionsForDecl(Declaration decl)
+        {
+            return allAssumptionsByDecl.TryGetValue(decl, out var assumptions)
+              ? assumptions : Enumerable.Empty<Assumption>();
+        }
+
+        private string RenderRow(string beg, string sep, string end, IEnumerable<string> cells)
+        {
+            return beg + String.Join(sep, cells) + end + MutateCSharp.Schemata213.ReplaceStringConstant_0(1L, "\n");
+        }
+
+        private string GetFullName(Declaration decl)
+        {
+            if (decl is MemberDecl m)
+            {
+                return m.FullDafnyName;
+            }
+            else if (decl is ModuleDecl mod)
+            {
+                return mod.FullDafnyName;
+            }
+            else if (decl is TopLevelDecl tld)
+            {
+                return tld.FullDafnyName;
+            }
+            else
+            {
+                return decl.Name;
+            }
+
+            return default;
+        }
+        private IEnumerable<string> IssueRow(Declaration decl, Assumption a, string issue, string mitigation, Func<string, string> targetFormatter)
+        {
+            return new List<string>() {
       GetFullName(decl),
       (!(decl is ICallable c && c.IsGhost)).ToString(),
-      Attributes.Contains(decl.Attributes, "axiom").ToString(),
-      Attributes.Contains(decl.Attributes, "extern").ToString(),
+      Attributes.Contains(decl.Attributes, MutateCSharp.Schemata213.ReplaceStringConstant_0(2L, "axiom")).ToString(),
+      Attributes.Contains(decl.Attributes, MutateCSharp.Schemata213.ReplaceStringConstant_0(3L, "extern")).ToString(),
       targetFormatter(issue),
       targetFormatter(mitigation)
     };
-  }
-
-  private string RenderAssumptionRows(Declaration decl, IEnumerable<Assumption> assumptions, string beg, string sep, string end, Func<string, string> targetFormatter) {
-    var rows = assumptions
-      .Select(a => RenderRow(beg, sep, end, IssueRow(decl, a, a.desc.Issue, a.desc.Mitigation, targetFormatter)));
-    return String.Concat(rows);
-  }
-
-  private string RenderAssumptionRowsMarkdown(Declaration decl, IEnumerable<Assumption> a) {
-    return RenderAssumptionRows(decl, a, "| ", " | ", " |",
-      s => Assumption.UpdateVerbatim(s, "`", "`"));
-  }
-
-  private string RenderAssumptionRowsHTML(Declaration decl, IEnumerable<Assumption> a) {
-    return RenderAssumptionRows(decl, a, "<tr><td>", "</td><td>", "</td></tr>",
-      s => Assumption.UpdateVerbatim(s, "<code>", "</code>"));
-  }
-
-  public string RenderHTMLTable() {
-    var header =
-      "<tr><th>Name</th><th>Compiled</th><th>Explicit Assumption</th>" +
-      "<th>Extern</th><th>Issue</th><th>Mitigation</th></tr>\n";
-    var rows = assumptionsByDecl.Select(entry => RenderAssumptionRowsHTML(entry.Key, entry.Value));
-    return header + String.Concat(rows);
-  }
-
-  public string RenderMarkdownTable() {
-    var header =
-      "|Name|Compiled|Explicit Assumption|Extern|Issue|Mitigation|\n" +
-      "|----|--------|-------------------|------|-----|----------|\n";
-    var rows = assumptionsByDecl.Select(entry => RenderAssumptionRowsMarkdown(entry.Key, entry.Value));
-    return header + String.Concat(rows);
-  }
-
-  private void AppendMarkdownIETFDescription(AssumptionDescription desc, StringBuilder text) {
-    var issue = Assumption.UpdateVerbatim(desc.Issue, "`", "`");
-    var mitigation = Assumption.UpdateVerbatim(desc.MitigationIetf, "`", "`");
-    text.AppendLine("");
-    text.AppendLine($"* {issue} {mitigation}");
-  }
-
-  public string RenderMarkdownIETF() {
-    StringBuilder text = new StringBuilder();
-
-    foreach (var module in modulesWithEntries) {
-      if (module.TryToAvoidName) {
-        text.AppendLine($"# Default module");
-      } else {
-        text.AppendLine($"# Module `{module.Name}`");
-      }
-      foreach (var topLevelDecl in module.TopLevelDecls) {
-        if (!declsWithEntries.Contains(topLevelDecl)) {
-          continue;
-        }
-        text.AppendLine("");
-        if (topLevelDecl is DefaultClassDecl) {
-          text.AppendLine($"## Top level");
-        } else {
-          text.AppendLine($"## Type `{topLevelDecl.Name}`");
         }
 
-        foreach (var a in AllAssumptionsForDecl(topLevelDecl)) {
-          AppendMarkdownIETFDescription(a.desc, text);
+        private string RenderAssumptionRows(Declaration decl, IEnumerable<Assumption> assumptions, string beg, string sep, string end, Func<string, string> targetFormatter)
+        {
+            var rows = assumptions
+              .Select(a => RenderRow(beg, sep, end, IssueRow(decl, a, a.desc.Issue, a.desc.Mitigation, targetFormatter)));
+            return String.Concat(rows);
         }
 
-        if (topLevelDecl is not TopLevelDeclWithMembers topLevelDeclWithMembers) {
-          continue;
+        private string RenderAssumptionRowsMarkdown(Declaration decl, IEnumerable<Assumption> a)
+        {
+            return RenderAssumptionRows(decl, a, MutateCSharp.Schemata213.ReplaceStringConstant_0(4L, "| "), MutateCSharp.Schemata213.ReplaceStringConstant_0(5L, " | "), MutateCSharp.Schemata213.ReplaceStringConstant_0(6L, " |"),
+              s => Assumption.UpdateVerbatim(s, MutateCSharp.Schemata213.ReplaceStringConstant_0(7L, "`"), MutateCSharp.Schemata213.ReplaceStringConstant_0(8L, "`")));
         }
-        foreach (var decl in topLevelDeclWithMembers.Members) {
-          if (!declsWithEntries.Contains(decl)) {
-            continue;
-          }
 
-          text.AppendLine("");
-          text.AppendLine($"### Member `{decl.Name}`");
-          foreach (var a in AllAssumptionsForDecl(decl)) {
-            AppendMarkdownIETFDescription(a.desc, text);
-          }
+        private string RenderAssumptionRowsHTML(Declaration decl, IEnumerable<Assumption> a)
+        {
+            return RenderAssumptionRows(decl, a, MutateCSharp.Schemata213.ReplaceStringConstant_0(9L, "<tr><td>"), MutateCSharp.Schemata213.ReplaceStringConstant_0(10L, "</td><td>"), MutateCSharp.Schemata213.ReplaceStringConstant_0(11L, "</td></tr>"),
+              s => Assumption.UpdateVerbatim(s, MutateCSharp.Schemata213.ReplaceStringConstant_0(12L, "<code>"), MutateCSharp.Schemata213.ReplaceStringConstant_0(13L, "</code>")));
         }
-      }
+
+        public string RenderHTMLTable()
+        {
+            var header = MutateCSharp.Schemata213.ReplaceStringConstant_0(14L, "<tr><th>Name</th><th>Compiled</th><th>Explicit Assumption</th>") +
+        MutateCSharp.Schemata213.ReplaceStringConstant_0(15L, "<th>Extern</th><th>Issue</th><th>Mitigation</th></tr>\n");
+            var rows = assumptionsByDecl.Select(entry => RenderAssumptionRowsHTML(entry.Key, entry.Value));
+            return header + String.Concat(rows);
+        }
+
+        public string RenderMarkdownTable()
+        {
+            var header = MutateCSharp.Schemata213.ReplaceStringConstant_0(16L, "|Name|Compiled|Explicit Assumption|Extern|Issue|Mitigation|\n") +
+        MutateCSharp.Schemata213.ReplaceStringConstant_0(17L, "|----|--------|-------------------|------|-----|----------|\n");
+            var rows = assumptionsByDecl.Select(entry => RenderAssumptionRowsMarkdown(entry.Key, entry.Value));
+            return header + String.Concat(rows);
+        }
+
+        private void AppendMarkdownIETFDescription(AssumptionDescription desc, StringBuilder text)
+        {
+            var issue = Assumption.UpdateVerbatim(desc.Issue, MutateCSharp.Schemata213.ReplaceStringConstant_0(18L, "`"), MutateCSharp.Schemata213.ReplaceStringConstant_0(19L, "`"));
+            var mitigation = Assumption.UpdateVerbatim(desc.MitigationIetf, MutateCSharp.Schemata213.ReplaceStringConstant_0(20L, "`"), MutateCSharp.Schemata213.ReplaceStringConstant_0(21L, "`"));
+            text.AppendLine("");
+            text.AppendLine($"* {issue} {mitigation}");
+        }
+
+        public string RenderMarkdownIETF()
+        {
+            StringBuilder text = new StringBuilder();
+
+            foreach (var module in modulesWithEntries)
+            {
+                if (module.TryToAvoidName)
+                {
+                    text.AppendLine($"# Default module");
+                }
+                else
+                {
+                    text.AppendLine($"# Module `{module.Name}`");
+                }
+                foreach (var topLevelDecl in module.TopLevelDecls)
+                {
+                    if (!declsWithEntries.Contains(topLevelDecl))
+                    {
+                        continue;
+                    }
+                    text.AppendLine("");
+                    if (topLevelDecl is DefaultClassDecl)
+                    {
+                        text.AppendLine($"## Top level");
+                    }
+                    else
+                    {
+                        text.AppendLine($"## Type `{topLevelDecl.Name}`");
+                    }
+
+                    foreach (var a in AllAssumptionsForDecl(topLevelDecl))
+                    {
+                        AppendMarkdownIETFDescription(a.desc, text);
+                    }
+
+                    if (topLevelDecl is not TopLevelDeclWithMembers topLevelDeclWithMembers)
+                    {
+                        continue;
+                    }
+                    foreach (var decl in topLevelDeclWithMembers.Members)
+                    {
+                        if (!declsWithEntries.Contains(decl))
+                        {
+                            continue;
+                        }
+
+                        text.AppendLine("");
+                        text.AppendLine($"### Member `{decl.Name}`");
+                        foreach (var a in AllAssumptionsForDecl(decl))
+                        {
+                            AppendMarkdownIETFDescription(a.desc, text);
+                        }
+                    }
+                }
+            }
+
+            return text.ToString();
+        }
+
+        public string RenderText()
+        {
+            var text = new StringBuilder();
+
+            foreach (var (decl, assumptions) in assumptionsByDecl)
+            {
+                foreach (var assumption in assumptions)
+                {
+                    text.AppendLine($"{decl.tok.TokenToString(options)}:{assumption.Warning()}");
+                }
+            }
+
+            return text.ToString();
+        }
+
+        public static AuditReport BuildReport(Program program)
+        {
+            AuditReport report = new(program.Options);
+
+            report.allAssumptionsByDecl = program.Assumptions(null)
+              .GroupBy(a => a.decl)
+              .ToDictionary(g => g.Key,
+                            g => g.Select(a => a));
+
+            foreach (var moduleDefinition in program.Modules())
+            {
+                foreach (var topLevelDecl in moduleDefinition.TopLevelDecls)
+                {
+                    report.AddAssumptions(topLevelDecl, report.AllAssumptionsForDecl(topLevelDecl));
+
+                    if (topLevelDecl is not TopLevelDeclWithMembers topLevelDeclWithMembers)
+                    {
+                        continue;
+                    }
+                    foreach (var decl in topLevelDeclWithMembers.Members)
+                    {
+                        if (decl.tok.FromIncludeDirective(program))
+                        {
+                            // Don't audit included code
+                            continue;
+                        }
+
+                        report.AddAssumptions(decl, report.AllAssumptionsForDecl(decl));
+                    }
+                }
+            }
+
+            return report;
+        }
     }
-
-    return text.ToString();
-  }
-
-  public string RenderText() {
-    var text = new StringBuilder();
-
-    foreach (var (decl, assumptions) in assumptionsByDecl) {
-      foreach (var assumption in assumptions) {
-        text.AppendLine($"{decl.tok.TokenToString(options)}:{assumption.Warning()}");
-      }
-    }
-
-    return text.ToString();
-  }
-
-  public static AuditReport BuildReport(Program program) {
-    AuditReport report = new(program.Options);
-
-    report.allAssumptionsByDecl = program.Assumptions(null)
-      .GroupBy(a => a.decl)
-      .ToDictionary(g => g.Key,
-                    g => g.Select(a => a));
-
-    foreach (var moduleDefinition in program.Modules()) {
-      foreach (var topLevelDecl in moduleDefinition.TopLevelDecls) {
-        report.AddAssumptions(topLevelDecl, report.AllAssumptionsForDecl(topLevelDecl));
-
-        if (topLevelDecl is not TopLevelDeclWithMembers topLevelDeclWithMembers) {
-          continue;
-        }
-        foreach (var decl in topLevelDeclWithMembers.Members) {
-          if (decl.tok.FromIncludeDirective(program)) {
-            // Don't audit included code
-            continue;
-          }
-
-          report.AddAssumptions(decl, report.AllAssumptionsForDecl(decl));
-        }
-      }
-    }
-
-    return report;
-  }
 }

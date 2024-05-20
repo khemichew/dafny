@@ -1,226 +1,298 @@
 using System;
 using System.Diagnostics.Contracts;
 using System.Linq;
+namespace MutateCSharp
+{
+    internal class Schemata272
+    {
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT272");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
 
-namespace Microsoft.Dafny;
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
+        }
+        internal static bool ReplaceBinExprOp_1(long mutantId, string argument1, string argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            return argument1 == argument2;
+        }
 
-public class FeatureDescriptionAttribute : Attribute {
-  public readonly string Description;
-  public readonly string ReferenceManualSection;
-  public readonly string FootnoteIdentifier;
-  public readonly string Footnote;
+        internal static bool ReplaceBinExprOp_0(long mutantId, Microsoft.Dafny.FeatureDescriptionAttribute argument1, object argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            return argument1 != argument2;
+        }
 
+        internal static bool ReplaceBinExprOp_3(long mutantId, System.Reflection.MemberInfo argument1, object argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            return argument1 == argument2;
+        }
 
-  public FeatureDescriptionAttribute(string description, string refmanSec, string footnoteIdentifier = null, string footnote = null) {
-    Contract.Requires((footnoteIdentifier == null) == (footnote == null));
-    Description = description;
-    ReferenceManualSection = refmanSec;
-    FootnoteIdentifier = footnoteIdentifier;
-    Footnote = footnote;
-  }
+        internal static string ReplaceStringConstant_4(long mutantId, string argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return string.Empty; }
+            return argument1;
+        }
 
-  public static FeatureDescriptionAttribute GetDescription(Feature feature) {
-    var memberInfo = typeof(Feature).GetMember(feature.ToString()).First();
-    return (FeatureDescriptionAttribute)GetCustomAttribute(memberInfo, typeof(FeatureDescriptionAttribute));
-  }
+        internal static bool ReplaceBinExprOp_2(long mutantId, System.Func<bool> argument1, System.Func<bool> argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 5)) { return argument1() && argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1() || argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1() | argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1() & argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1() ^ argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1() == argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 5) { return argument1() != argument2(); }
+            return argument1() && argument2();
+        }
 
-  public static Feature ForDescription(string description) {
-    var memberInfo = typeof(Feature).GetMembers().FirstOrDefault(memberInfo => {
-      var attribute = (FeatureDescriptionAttribute)GetCustomAttribute(memberInfo, typeof(FeatureDescriptionAttribute));
-      return attribute != null && attribute.Description == description;
-    });
-    if (memberInfo == null) {
-      throw new Exception($"Unrecognized feature description: '{description}'");
     }
-
-    return (Feature)Enum.Parse(typeof(Feature), memberInfo.Name);
-  }
 }
 
-public enum Feature {
-  [FeatureDescription("Unbounded integers", "sec-numeric-types")]
-  UnboundedIntegers,
+namespace Microsoft.Dafny
+{
+    public class FeatureDescriptionAttribute : Attribute
+    {
+        public readonly string Description;
+        public readonly string ReferenceManualSection;
+        public readonly string FootnoteIdentifier;
+        public readonly string Footnote;
 
-  [FeatureDescription("Real numbers", "sec-numeric-types")]
-  RealNumbers,
 
-  [FeatureDescription("Ordinals", "sec-ordinals")]
-  Ordinals,
+        public FeatureDescriptionAttribute(string description, string refmanSec, string footnoteIdentifier = null, string footnote = null)
+        {
+            Contract.Requires((footnoteIdentifier == null) == (footnote == null));
+            Description = description;
+            ReferenceManualSection = refmanSec;
+            FootnoteIdentifier = footnoteIdentifier;
+            Footnote = footnote;
+        }
 
-  [FeatureDescription("Function values", "sec-arrow-subset-types")]
-  FunctionValues,
+        public static FeatureDescriptionAttribute GetDescription(Feature feature)
+        {
+            var memberInfo = typeof(Feature).GetMember(feature.ToString()).First();
+            return (FeatureDescriptionAttribute)GetCustomAttribute(memberInfo, typeof(FeatureDescriptionAttribute));
+        }
 
-  [FeatureDescription("Iterators", "sec-iterator-types")]
-  Iterators,
+        public static Feature ForDescription(string description)
+        {
+            var memberInfo = typeof(Feature).GetMembers().FirstOrDefault(memberInfo =>
+            {
+                var attribute = (FeatureDescriptionAttribute)GetCustomAttribute(memberInfo, typeof(FeatureDescriptionAttribute));
+                return MutateCSharp.Schemata272.ReplaceBinExprOp_2(3L, () => MutateCSharp.Schemata272.ReplaceBinExprOp_0(1L, attribute, null), () => MutateCSharp.Schemata272.ReplaceBinExprOp_1(2L, attribute.Description, description));
+            });
+            if (MutateCSharp.Schemata272.ReplaceBinExprOp_3(9L, memberInfo, null))
+            {
+                throw new Exception($"Unrecognized feature description: '{description}'");
+            }
 
-  [FeatureDescription("Collections with trait element types", "sec-collection-types")]
-  CollectionsOfTraits,
+            return (Feature)Enum.Parse(typeof(Feature), memberInfo.Name);
+        }
+    }
 
-  [FeatureDescription("External module names with only underscores", "sec-extern-decls")]
-  AllUnderscoreExternalModuleNames,
+    public enum Feature
+    {
+        [FeatureDescription("Unbounded integers", "sec-numeric-types")]
+        UnboundedIntegers,
 
-  [FeatureDescription("Co-inductive datatypes", "sec-coinductive-datatypes")]
-  Codatatypes,
+        [FeatureDescription("Real numbers", "sec-numeric-types")]
+        RealNumbers,
 
-  [FeatureDescription("Multisets", "sec-multisets")]
-  Multisets,
+        [FeatureDescription("Ordinals", "sec-ordinals")]
+        Ordinals,
 
-  [FeatureDescription("Runtime type descriptors", null)]
-  RuntimeTypeDescriptors,
+        [FeatureDescription("Function values", "sec-arrow-subset-types")]
+        FunctionValues,
 
-  [FeatureDescription("Multi-dimensional arrays", "sec-multi-dimensional-arrays")]
-  MultiDimensionalArrays,
+        [FeatureDescription("Iterators", "sec-iterator-types")]
+        Iterators,
 
-  [FeatureDescription("Map comprehensions", "sec-map-comprehension-expression")]
-  MapComprehensions,
+        [FeatureDescription("Collections with trait element types", "sec-collection-types")]
+        CollectionsOfTraits,
 
-  [FeatureDescription("Traits", "sec-trait-types")]
-  Traits,
+        [FeatureDescription("External module names with only underscores", "sec-extern-decls")]
+        AllUnderscoreExternalModuleNames,
 
-  [FeatureDescription("Let-such-that expressions", "sec-let-expression")]
-  LetSuchThatExpressions,
+        [FeatureDescription("Co-inductive datatypes", "sec-coinductive-datatypes")]
+        Codatatypes,
 
-  [FeatureDescription("Non-native numeric newtypes", "sec-newtypes")]
-  NonNativeNewtypes,
+        [FeatureDescription("Multisets", "sec-multisets")]
+        Multisets,
 
-  [FeatureDescription("Method synthesis", "sec-synthesize-attr")]
-  MethodSynthesis,
+        [FeatureDescription("Runtime type descriptors", null)]
+        RuntimeTypeDescriptors,
 
-  [FeatureDescription("External classes", "sec-extern-decls")]
-  ExternalClasses,
+        [FeatureDescription("Multi-dimensional arrays", "sec-multi-dimensional-arrays")]
+        MultiDimensionalArrays,
 
-  [FeatureDescription("Instantiating the `object` type", "sec-object-type")]
-  NewObject,
+        [FeatureDescription("Map comprehensions", "sec-map-comprehension-expression")]
+        MapComprehensions,
 
-  [FeatureDescription("`forall` statements that cannot be sequentialized", "sec-forall-statement",
-    "compiler-feature-forall-note", @"'Sequentializing' a `forall` statement refers to compiling it directly to a series of nested loops
+        [FeatureDescription("Traits", "sec-trait-types")]
+        Traits,
+
+        [FeatureDescription("Let-such-that expressions", "sec-let-expression")]
+        LetSuchThatExpressions,
+
+        [FeatureDescription("Non-native numeric newtypes", "sec-newtypes")]
+        NonNativeNewtypes,
+
+        [FeatureDescription("Method synthesis", "sec-synthesize-attr")]
+        MethodSynthesis,
+
+        [FeatureDescription("External classes", "sec-extern-decls")]
+        ExternalClasses,
+
+        [FeatureDescription("Instantiating the `object` type", "sec-object-type")]
+        NewObject,
+
+        [FeatureDescription("`forall` statements that cannot be sequentialized", "sec-forall-statement",
+          "compiler-feature-forall-note", @"'Sequentializing' a `forall` statement refers to compiling it directly to a series of nested loops
     with the statement's body directly inside. The alternative, default compilation strategy
     is to calculate the quantified variable bindings separately as a collection of tuples,
     and then execute the statement's body for each tuple.
     Not all `forall` statements can be sequentialized.")]
-  NonSequentializableForallStatements,
+        NonSequentializableForallStatements,
 
-  [FeatureDescription("Taking an array's length", "sec-array-type")]
-  ArrayLength,
+        [FeatureDescription("Taking an array's length", "sec-array-type")]
+        ArrayLength,
 
-  [FeatureDescription("`m.Items` when `m` is a map", "sec-maps")]
-  MapItems,
+        [FeatureDescription("`m.Items` when `m` is a map", "sec-maps")]
+        MapItems,
 
-  [FeatureDescription("The /runAllTests option", "sec-test-attribute")]
-  RunAllTests,
+        [FeatureDescription("The /runAllTests option", "sec-test-attribute")]
+        RunAllTests,
 
-  [FeatureDescription("Integer range constraints in quantifiers (e.g. `a <= x <= b`)", "sec-quantifier-domains")]
-  IntBoundedPool,
+        [FeatureDescription("Integer range constraints in quantifiers (e.g. `a <= x <= b`)", "sec-quantifier-domains")]
+        IntBoundedPool,
 
-  [FeatureDescription("Exact value constraints in quantifiers (`x == C`)", "sec-quantifier-domains")]
-  ExactBoundedPool,
+        [FeatureDescription("Exact value constraints in quantifiers (`x == C`)", "sec-quantifier-domains")]
+        ExactBoundedPool,
 
-  [FeatureDescription("Sequence displays of characters", "sec-sequence-displays",
-    "compiler-sequence-display-of-characters-note", "This refers to an expression such as `['H', 'e', 'l', 'l', 'o']`, as opposed to a string literal such as `\"Hello\"`.")]
-  SequenceDisplaysOfCharacters,
+        [FeatureDescription("Sequence displays of characters", "sec-sequence-displays",
+          "compiler-sequence-display-of-characters-note", "This refers to an expression such as `['H', 'e', 'l', 'l', 'o']`, as opposed to a string literal such as `\"Hello\"`.")]
+        SequenceDisplaysOfCharacters,
 
-  [FeatureDescription("Type test expressions (`x is T`)", "sec-as-is-expression")]
-  TypeTests,
+        [FeatureDescription("Type test expressions (`x is T`)", "sec-as-is-expression")]
+        TypeTests,
 
-  [FeatureDescription("Type test expressions on subset types", "sec-as-is-expression")]
-  SubsetTypeTests,
+        [FeatureDescription("Type test expressions on subset types", "sec-as-is-expression")]
+        SubsetTypeTests,
 
-  [FeatureDescription("Quantifiers", "sec-quantifier-expression")]
-  Quantifiers,
+        [FeatureDescription("Quantifiers", "sec-quantifier-expression")]
+        Quantifiers,
 
-  [FeatureDescription("Bitvector RotateLeft/RotateRight functions", "sec-bit-vector-types")]
-  BitvectorRotateFunctions,
+        [FeatureDescription("Bitvector RotateLeft/RotateRight functions", "sec-bit-vector-types")]
+        BitvectorRotateFunctions,
 
-  [FeatureDescription("`for` loops", "sec-for-statement")]
-  ForLoops,
+        [FeatureDescription("`for` loops", "sec-for-statement")]
+        ForLoops,
 
-  [FeatureDescription("`continue` statements", "sec-break-continue-statement")]
-  ContinueStatements,
+        [FeatureDescription("`continue` statements", "sec-break-continue-statement")]
+        ContinueStatements,
 
-  [FeatureDescription("Assign-such-that statements with potentially infinite bounds", "sec-update-and-call-statement",
-    "compiler-infinite-assign-such-that-note", @"This refers to assign-such-that statements with multiple variables,
+        [FeatureDescription("Assign-such-that statements with potentially infinite bounds", "sec-update-and-call-statement",
+          "compiler-infinite-assign-such-that-note", @"This refers to assign-such-that statements with multiple variables,
     and where at least one variable has potentially infinite bounds.
     For example, the implementation of the statement `var x: nat, y: nat :| 0 < x && 0 < y && x*x == y*y*y + 1;`
     needs to avoid the naive approach of iterating all possible values of `x` and `y` in a nested loop.")]
-  AssignSuchThatWithNonFiniteBounds,
+        AssignSuchThatWithNonFiniteBounds,
 
-  [FeatureDescription("Sequence update expressions", "sec-other-sequence-expressions")]
-  SequenceUpdateExpressions,
+        [FeatureDescription("Sequence update expressions", "sec-other-sequence-expressions")]
+        SequenceUpdateExpressions,
 
-  [FeatureDescription("Sequence constructions with non-lambda initializers", "sec-sequence-displays",
-    "compiler-sequence-display-nolambda-note", @"Sequence construction expressions often use a direct lambda expression, as in `seq(10, x => x * x)`,
+        [FeatureDescription("Sequence constructions with non-lambda initializers", "sec-sequence-displays",
+          "compiler-sequence-display-nolambda-note", @"Sequence construction expressions often use a direct lambda expression, as in `seq(10, x => x * x)`,
     but they can also be used with arbitrary function values, as in `seq(10, squareFn)`.")]
-  SequenceConstructionsWithNonLambdaInitializers,
+        SequenceConstructionsWithNonLambdaInitializers,
 
-  [FeatureDescription("Externally-implemented constructors", "sec-extern-decls")]
-  ExternalConstructors,
+        [FeatureDescription("Externally-implemented constructors", "sec-extern-decls")]
+        ExternalConstructors,
 
-  [FeatureDescription("Auto-initialization of tuple variables", "sec-tuple-types")]
-  TupleInitialization,
+        [FeatureDescription("Auto-initialization of tuple variables", "sec-tuple-types")]
+        TupleInitialization,
 
-  [FeatureDescription("Subtype constraints in quantifiers", "sec-quantifier-expression")]
-  SubtypeConstraintsInQuantifiers,
+        [FeatureDescription("Subtype constraints in quantifiers", "sec-quantifier-expression")]
+        SubtypeConstraintsInQuantifiers,
 
-  [FeatureDescription("Tuples with more than 20 arguments", "#sec-compilation-built-ins")]
-  TuplesWiderThan20,
+        [FeatureDescription("Tuples with more than 20 arguments", "#sec-compilation-built-ins")]
+        TuplesWiderThan20,
 
-  [FeatureDescription("Arrays with more than 16 dimensions", "#sec-compilation-built-ins")]
-  ArraysWithMoreThan16Dims,
+        [FeatureDescription("Arrays with more than 16 dimensions", "#sec-compilation-built-ins")]
+        ArraysWithMoreThan16Dims,
 
-  [FeatureDescription("Arrow types with more than 16 arguments", "#sec-compilation-built-ins")]
-  ArrowsWithMoreThan16Arguments,
+        [FeatureDescription("Arrow types with more than 16 arguments", "#sec-compilation-built-ins")]
+        ArrowsWithMoreThan16Arguments,
 
-  [FeatureDescription("Unicode chars", "#sec-characters")]
-  UnicodeChars,
+        [FeatureDescription("Unicode chars", "#sec-characters")]
+        UnicodeChars,
 
-  [FeatureDescription("Converting values to strings", "sec-print-statement")]
-  ConvertingValuesToStrings,
+        [FeatureDescription("Converting values to strings", "sec-print-statement")]
+        ConvertingValuesToStrings,
 
-  // Only used internally for the DooBackend to skip legacy CLI tests
-  [FeatureDescription("Legacy CLI without commands", "sec-dafny-commands")]
-  LegacyCLI,
+        // Only used internally for the DooBackend to skip legacy CLI tests
+        [FeatureDescription("Legacy CLI without commands", "sec-dafny-commands")]
+        LegacyCLI,
 
-  [FeatureDescription("Separate compilation", "sec-compilation")]
-  SeparateCompilation,
+        [FeatureDescription("Separate compilation", "sec-compilation")]
+        SeparateCompilation,
 
-  [FeatureDescription("All built-in types in runtime library", "sec-compilation-built-ins")]
-  BuiltinsInRuntime,
+        [FeatureDescription("All built-in types in runtime library", "sec-compilation-built-ins")]
+        BuiltinsInRuntime,
 
-  [FeatureDescription("Execution coverage report", "sec-dafny-test")]
-  RuntimeCoverageReport
-}
+        [FeatureDescription("Execution coverage report", "sec-dafny-test")]
+        RuntimeCoverageReport
+    }
 
-public class UnsupportedFeatureException : Exception {
+    public class UnsupportedFeatureException : Exception
+    {
 
-  public const string MessagePrefix =
-    "Feature not supported for this compilation target: ";
+        public const string MessagePrefix =
+          "Feature not supported for this compilation target: ";
 
-  public readonly IToken Token;
-  public readonly Feature Feature;
+        public readonly IToken Token;
+        public readonly Feature Feature;
 
-  public UnsupportedFeatureException(IToken token, Feature feature)
-    : this(token, feature, MessagePrefix + FeatureDescriptionAttribute.GetDescription(feature).Description) {
+        public UnsupportedFeatureException(IToken token, Feature feature)
+          : this(token, feature, MessagePrefix + FeatureDescriptionAttribute.GetDescription(feature).Description)
+        {
 
-  }
+        }
 
-  public UnsupportedFeatureException(IToken token, Feature feature, string message) : base(message) {
-    Token = token;
-    Feature = feature;
-  }
-}
+        public UnsupportedFeatureException(IToken token, Feature feature, string message) : base(message)
+        {
+            Token = token;
+            Feature = feature;
+        }
+    }
 
 
 
-public class RecoverableUnsupportedFeatureException : UnsupportedFeatureException {
+    public class RecoverableUnsupportedFeatureException : UnsupportedFeatureException
+    {
 
-  public static readonly string MessageSuffix = ". To continue despite this issue, you can compile with the option --" +
-                                       CommonOptionBag.EmitUncompilableCode.Name;
-  public RecoverableUnsupportedFeatureException(IToken token, Feature feature)
-    : base(token, feature, MessagePrefix + FeatureDescriptionAttribute.GetDescription(feature).Description + MessageSuffix) {
-  }
-}
+        public static readonly string MessageSuffix = MutateCSharp.Schemata272.ReplaceStringConstant_4(10L, ". To continue despite this issue, you can compile with the option --") +
+                                             CommonOptionBag.EmitUncompilableCode.Name;
+        public RecoverableUnsupportedFeatureException(IToken token, Feature feature)
+          : base(token, feature, MessagePrefix + FeatureDescriptionAttribute.GetDescription(feature).Description + MessageSuffix)
+        {
+        }
+    }
 
-public class UnsupportedInvalidOperationException : InvalidOperationException {
-  public UnsupportedInvalidOperationException(string why) : base(typeof(UnsupportedInvalidOperationException).FullName! + ": " + why) {
-  }
+    public class UnsupportedInvalidOperationException : InvalidOperationException
+    {
+        public UnsupportedInvalidOperationException(string why) : base(typeof(UnsupportedInvalidOperationException).FullName! + MutateCSharp.Schemata272.ReplaceStringConstant_4(11L, ": ") + why)
+        {
+        }
+    }
 }

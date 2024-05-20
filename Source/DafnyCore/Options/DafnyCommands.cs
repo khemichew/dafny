@@ -4,23 +4,57 @@ using System.IO;
 using System.Linq;
 using DafnyCore;
 using Microsoft.Dafny.Plugins;
+namespace MutateCSharp
+{
+    internal class Schemata326
+    {
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT326");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
 
-namespace Microsoft.Dafny;
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
+        }
+        internal static string ReplaceStringConstant_0(long mutantId, string argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return string.Empty; }
+            return argument1;
+        }
 
-public static class DafnyCommands {
+        internal static bool ReplaceBooleanConstant_1(long mutantId, bool argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return !argument1; }
+            return argument1;
+        }
 
-  public static Argument<FileInfo> FileArgument { get; }
-  public static Argument<List<FileInfo>> FilesArgument { get; }
+    }
+}
 
-  static DafnyCommands() {
+namespace Microsoft.Dafny
+{
+    public static class DafnyCommands
+    {
 
-    FileArgument = new Argument<FileInfo>("file", "Dafny input file or Dafny project file");
-    FilesArgument = new("file", r => {
-      return r.Tokens.Where(t => !string.IsNullOrEmpty(t.Value)).Select(t => new FileInfo(t.Value)).ToList();
-    }, false, "Dafny input files and/or a Dafny project file");
-  }
+        public static Argument<FileInfo> FileArgument { get; }
+        public static Argument<List<FileInfo>> FilesArgument { get; }
 
-  public static readonly IReadOnlyList<Option> VerificationOptions = new Option[] {
+        static DafnyCommands()
+        {
+
+            FileArgument = new Argument<FileInfo>(MutateCSharp.Schemata326.ReplaceStringConstant_0(1L, "file"), MutateCSharp.Schemata326.ReplaceStringConstant_0(2L, "Dafny input file or Dafny project file"));
+            FilesArgument = new(MutateCSharp.Schemata326.ReplaceStringConstant_0(3L, "file"), r =>
+            {
+                return r.Tokens.Where(t => !string.IsNullOrEmpty(t.Value)).Select(t => new FileInfo(t.Value)).ToList();
+            }, MutateCSharp.Schemata326.ReplaceBooleanConstant_1(4L, false), MutateCSharp.Schemata326.ReplaceStringConstant_0(5L, "Dafny input files and/or a Dafny project file"));
+        }
+
+        public static readonly IReadOnlyList<Option> VerificationOptions = new Option[] {
     CommonOptionBag.ProgressOption,
     CommonOptionBag.RelaxDefiniteAssignment,
     BoogieOptionBag.VerificationTimeLimit,
@@ -48,7 +82,7 @@ public static class DafnyCommands {
     CommonOptionBag.ShowProofObligationExpressions
   }.ToList();
 
-  public static readonly IReadOnlyList<Option> TranslationOptions = new Option[] {
+        public static readonly IReadOnlyList<Option> TranslationOptions = new Option[] {
     BoogieOptionBag.NoVerify,
     BoogieOptionBag.HiddenNoVerify,
     CommonOptionBag.EnforceDeterminism,
@@ -60,14 +94,14 @@ public static class DafnyCommands {
     IExecutableBackend.TranslationRecords,
   }.Concat(VerificationOptions).ToList();
 
-  public static readonly IReadOnlyList<Option> ExecutionOptions = new Option[] {
+        public static readonly IReadOnlyList<Option> ExecutionOptions = new Option[] {
     CommonOptionBag.Target,
     CommonOptionBag.SpillTranslation,
     CommonOptionBag.InternalIncludeRuntimeOptionForExecution,
     CommonOptionBag.ExecutionCoverageReport
   }.Concat(TranslationOptions).ToList();
 
-  public static readonly IReadOnlyList<Option> ConsoleOutputOptions = new List<Option>(new Option[] {
+        public static readonly IReadOnlyList<Option> ConsoleOutputOptions = new List<Option>(new Option[] {
     Snippets.ShowSnippets,
     DeveloperOptionBag.PrintOption,
     DeveloperOptionBag.ResolvedPrint,
@@ -77,7 +111,7 @@ public static class DafnyCommands {
     CommonOptionBag.WarnAsErrors
   });
 
-  public static readonly IReadOnlyList<Option> ParserOptions = new List<Option>(new Option[] {
+        public static readonly IReadOnlyList<Option> ParserOptions = new List<Option>(new Option[] {
     CommonOptionBag.StdIn,
     CommonOptionBag.Verbose,
     BoogieOptionBag.Cores,
@@ -101,7 +135,7 @@ public static class DafnyCommands {
     CommonOptionBag.LogLocation
   });
 
-  public static IReadOnlyList<Option> ResolverOptions = new List<Option>(new Option[] {
+        public static IReadOnlyList<Option> ResolverOptions = new List<Option>(new Option[] {
     CommonOptionBag.ShowHints,
     CommonOptionBag.WarnShadowing,
     CommonOptionBag.WarnMissingConstructorParenthesis,
@@ -109,4 +143,5 @@ public static class DafnyCommands {
     CommonOptionBag.AllowAxioms,
     MethodOrFunction.AllowExternalContracts
   }).Concat(ParserOptions).ToList();
+    }
 }

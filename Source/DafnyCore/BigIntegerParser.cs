@@ -6,7 +6,7 @@ using System.Numerics;
 using System.Globalization;
 
 namespace Microsoft.Dafny {
-  internal static class BigIntegerParser {
+public static class BigIntegerParser {
     /// <summary>
     ///   Mono does not support the BigInteger.TryParse method. In practice,
     ///   we seldom actually need to parse huge integers, so it makes sense

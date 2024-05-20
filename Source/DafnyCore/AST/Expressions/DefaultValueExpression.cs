@@ -2,143 +2,207 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+namespace MutateCSharp
+{
+    internal class Schemata50
+    {
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT50");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
 
-namespace Microsoft.Dafny;
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
+        }
+        internal static string ReplaceStringConstant_0(long mutantId, string argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return string.Empty; }
+            return argument1;
+        }
 
-/// <summary>
-/// When an actual parameter is omitted for a formal with a default value, the positional resolved
-/// version of the actual parameter will have a DefaultValueExpression value. This has three
-/// advantages:
-/// * It allows the entire module to be resolved before any substitutions take place.
-/// * It gives a good place to check for default-value expressions that would give rise to an
-///   infinite expansion.
-/// * It preserves the pre-substitution form, which gives compilers a chance to avoid re-evaluation
-///   of actual parameters used in other default-valued expressions.
-///
-/// Note. Since DefaultValueExpression is a wrapper around another expression and can in several
-/// places be expanded according to its ResolvedExpression, it is convenient to make DefaultValueExpression
-/// inherit from ConcreteSyntaxExpression. However, there are some places in the code where
-/// one then needs to pay attention to DefaultValueExpression's. Such places would be more
-/// conspicuous if DefaultValueExpression were not an Expression at all. At the time of this
-/// writing, a change to a separate type has shown to be more hassle than the need for special
-/// attention to DefaultValueExpression's in some places.
-/// </summary>
-public abstract class DefaultValueExpression : ConcreteSyntaxExpression {
-  private readonly Formal formal;
-  private readonly Expression receiver;
-  private readonly Dictionary<IVariable, Expression> substMap;
+        internal static bool ReplaceBooleanConstant_1(long mutantId, bool argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return !argument1; }
+            return argument1;
+        }
 
-  protected abstract Dictionary<TypeParameter, Type> GetTypeMap();
+        internal static bool ReplaceBinExprOp_2(long mutantId, Microsoft.Dafny.DefaultValueExpression.WorkProgress argument1, Microsoft.Dafny.DefaultValueExpression.WorkProgress argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            return argument1 == argument2;
+        }
 
-  public enum WorkProgress { BeingVisited, Done }
-
-  protected DefaultValueExpression(IToken tok, Formal formal, Expression/*?*/ receiver, Dictionary<IVariable, Expression> substMap)
-    : base(tok) {
-    Contract.Requires(tok != null);
-    Contract.Requires(formal != null);
-    Contract.Requires(formal.DefaultValue != null);
-    Contract.Requires(substMap != null);
-    this.formal = formal;
-    this.receiver = receiver;
-    this.substMap = substMap;
-    RangeToken = new RangeToken(tok, tok);
-  }
-
-  protected DefaultValueExpression(Cloner cloner, DefaultValueExpression original) : base(cloner, original) {
-    if (!cloner.CloneResolvedFields) {
-      throw new InvalidOperationException("DefaultValueExpression is created during resolution");
     }
-    formal = cloner.CloneFormal(original.formal, true);
-    receiver = cloner.CloneExpr(original.receiver);
-    substMap = original.substMap;
-  }
-
-  public void FillIn(ModuleResolver resolver, Dictionary<DefaultValueExpression, WorkProgress> visited) {
-    if (visited.TryGetValue(this, out var p)) {
-      if (p == WorkProgress.Done) {
-        Contract.Assert(this.ResolvedExpression != null);
-      } else {
-        // there is a cycle
-        resolver.reporter.Error(MessageSource.Resolver, this,
-          "default-valued expressions are cyclicly dependent; this is not allowed, since it would cause infinite expansion");
-        // nevertheless, to avoid any issues in the resolver, fill in the .ResolvedExpression field with something
-        this.ResolvedExpression = Expression.CreateBoolLiteral(this.tok, false);
-      }
-      return;
-    }
-    Contract.Assert(this.ResolvedExpression == null);
-
-    visited.Add(this, WorkProgress.BeingVisited);
-    var typeMap = GetTypeMap();
-    var s = new DefaultValueSubstituter(resolver, visited, this.receiver, this.substMap, typeMap);
-    this.ResolvedExpression = s.Substitute(this.formal.DefaultValue);
-    visited[this] = WorkProgress.Done;
-  }
-
-  class DefaultValueSubstituter : Substituter {
-    private readonly ModuleResolver resolver;
-    private readonly Dictionary<DefaultValueExpression, DefaultValueExpression.WorkProgress> visited;
-    public DefaultValueSubstituter(ModuleResolver resolver, Dictionary<DefaultValueExpression, DefaultValueExpression.WorkProgress> visited,
-      Expression /*?*/ receiverReplacement, Dictionary<IVariable, Expression> substMap, Dictionary<TypeParameter, Type> typeMap)
-      : base(receiverReplacement, substMap, typeMap) {
-      Contract.Requires(resolver != null);
-      Contract.Requires(visited != null);
-      this.resolver = resolver;
-      this.visited = visited;
-    }
-
-    public override Expression Substitute(Expression expr) {
-      if (expr is DefaultValueExpression dve) {
-        dve.FillIn(resolver, visited);
-        Contract.Assert(dve.ResolvedExpression != null); // postcondition of FillIn
-      }
-      return base.Substitute(expr);
-    }
-  }
 }
 
-public class DefaultValueExpressionType : DefaultValueExpression, ICloneable<DefaultValueExpressionType> {
-  private readonly Dictionary<TypeParameter, Type> typeMap;
+namespace Microsoft.Dafny
+{
 
-  public DefaultValueExpressionType(IToken tok, Formal formal,
-    Expression/*?*/ receiver, Dictionary<IVariable, Expression> substMap, Dictionary<TypeParameter, Type> typeMap)
-    : base(tok, formal, receiver, substMap) {
-    this.typeMap = typeMap;
-  }
+    /// <summary>
+    /// When an actual parameter is omitted for a formal with a default value, the positional resolved
+    /// version of the actual parameter will have a DefaultValueExpression value. This has three
+    /// advantages:
+    /// * It allows the entire module to be resolved before any substitutions take place.
+    /// * It gives a good place to check for default-value expressions that would give rise to an
+    ///   infinite expansion.
+    /// * It preserves the pre-substitution form, which gives compilers a chance to avoid re-evaluation
+    ///   of actual parameters used in other default-valued expressions.
+    ///
+    /// Note. Since DefaultValueExpression is a wrapper around another expression and can in several
+    /// places be expanded according to its ResolvedExpression, it is convenient to make DefaultValueExpression
+    /// inherit from ConcreteSyntaxExpression. However, there are some places in the code where
+    /// one then needs to pay attention to DefaultValueExpression's. Such places would be more
+    /// conspicuous if DefaultValueExpression were not an Expression at all. At the time of this
+    /// writing, a change to a separate type has shown to be more hassle than the need for special
+    /// attention to DefaultValueExpression's in some places.
+    /// </summary>
+    public abstract class DefaultValueExpression : ConcreteSyntaxExpression
+    {
+        private readonly Formal formal;
+        private readonly Expression receiver;
+        private readonly Dictionary<IVariable, Expression> substMap;
 
-  public DefaultValueExpressionType(Cloner cloner, DefaultValueExpressionType original) : base(cloner, original) {
-    typeMap = original.typeMap;
-  }
+        protected abstract Dictionary<TypeParameter, Type> GetTypeMap();
 
-  public DefaultValueExpressionType Clone(Cloner cloner) {
-    return new DefaultValueExpressionType(cloner, this);
-  }
+        public enum WorkProgress { BeingVisited, Done }
 
-  protected override Dictionary<TypeParameter, Type> GetTypeMap() {
-    return typeMap;
-  }
-}
+        protected DefaultValueExpression(IToken tok, Formal formal, Expression/*?*/ receiver, Dictionary<IVariable, Expression> substMap)
+          : base(tok)
+        {
+            Contract.Requires(tok != null);
+            Contract.Requires(formal != null);
+            Contract.Requires(formal.DefaultValue != null);
+            Contract.Requires(substMap != null);
+            this.formal = formal;
+            this.receiver = receiver;
+            this.substMap = substMap;
+            RangeToken = new RangeToken(tok, tok);
+        }
 
-public class DefaultValueExpressionPreType : DefaultValueExpression, ICloneable<DefaultValueExpressionPreType> {
-  private readonly Dictionary<TypeParameter, PreType> preTypeMap;
+        protected DefaultValueExpression(Cloner cloner, DefaultValueExpression original) : base(cloner, original)
+        {
+            if (!cloner.CloneResolvedFields)
+            {
+                throw new InvalidOperationException(MutateCSharp.Schemata50.ReplaceStringConstant_0(1L, "DefaultValueExpression is created during resolution"));
+            }
+            formal = cloner.CloneFormal(original.formal, MutateCSharp.Schemata50.ReplaceBooleanConstant_1(2L, true));
+            receiver = cloner.CloneExpr(original.receiver);
+            substMap = original.substMap;
+        }
 
-  public DefaultValueExpressionPreType(IToken tok, Formal formal,
-    Expression/*?*/ receiver, Dictionary<IVariable, Expression> substMap, Dictionary<TypeParameter, PreType> preTypeMap)
-    : base(tok, formal, receiver, substMap) {
-    this.preTypeMap = preTypeMap;
-  }
+        public void FillIn(ModuleResolver resolver, Dictionary<DefaultValueExpression, WorkProgress> visited)
+        {
+            if (visited.TryGetValue(this, out var p))
+            {
+                if (MutateCSharp.Schemata50.ReplaceBinExprOp_2(3L, p, WorkProgress.Done))
+                {
+                    Contract.Assert(this.ResolvedExpression != null);
+                }
+                else
+                {
+                    // there is a cycle
+                    resolver.reporter.Error(MessageSource.Resolver, this,
+            MutateCSharp.Schemata50.ReplaceStringConstant_0(4L, "default-valued expressions are cyclicly dependent; this is not allowed, since it would cause infinite expansion"));
+                    // nevertheless, to avoid any issues in the resolver, fill in the .ResolvedExpression field with something
+                    this.ResolvedExpression = Expression.CreateBoolLiteral(this.tok, MutateCSharp.Schemata50.ReplaceBooleanConstant_1(5L, false));
+                }
+                return;
+            }
+            Contract.Assert(this.ResolvedExpression == null);
 
-  public DefaultValueExpressionPreType(Cloner cloner, DefaultValueExpressionPreType original) : base(cloner, original) {
-    preTypeMap = original.preTypeMap;
-  }
+            visited.Add(this, WorkProgress.BeingVisited);
+            var typeMap = GetTypeMap();
+            var s = new DefaultValueSubstituter(resolver, visited, this.receiver, this.substMap, typeMap);
+            this.ResolvedExpression = s.Substitute(this.formal.DefaultValue);
+            visited[this] = WorkProgress.Done;
+        }
 
-  public DefaultValueExpressionPreType Clone(Cloner cloner) {
-    return new DefaultValueExpressionPreType(cloner, this);
-  }
+        public
+          class DefaultValueSubstituter : Substituter
+        {
+            private readonly ModuleResolver resolver;
+            private readonly Dictionary<DefaultValueExpression, DefaultValueExpression.WorkProgress> visited;
+            public DefaultValueSubstituter(ModuleResolver resolver, Dictionary<DefaultValueExpression, DefaultValueExpression.WorkProgress> visited,
+              Expression /*?*/ receiverReplacement, Dictionary<IVariable, Expression> substMap, Dictionary<TypeParameter, Type> typeMap)
+              : base(receiverReplacement, substMap, typeMap)
+            {
+                Contract.Requires(resolver != null);
+                Contract.Requires(visited != null);
+                this.resolver = resolver;
+                this.visited = visited;
+            }
 
-  protected override Dictionary<TypeParameter, Type> GetTypeMap() {
-    return preTypeMap.ToDictionary(
-      x => x.Key,
-      x => PreType2TypeUtil.PreType2FixedType(x.Value));
-  }
+            public override Expression Substitute(Expression expr)
+            {
+                if (expr is DefaultValueExpression dve)
+                {
+                    dve.FillIn(resolver, visited);
+                    Contract.Assert(dve.ResolvedExpression != null); // postcondition of FillIn
+                }
+                return base.Substitute(expr);
+            }
+        }
+    }
+
+    public class DefaultValueExpressionType : DefaultValueExpression, ICloneable<DefaultValueExpressionType>
+    {
+        private readonly Dictionary<TypeParameter, Type> typeMap;
+
+        public DefaultValueExpressionType(IToken tok, Formal formal,
+          Expression/*?*/ receiver, Dictionary<IVariable, Expression> substMap, Dictionary<TypeParameter, Type> typeMap)
+          : base(tok, formal, receiver, substMap)
+        {
+            this.typeMap = typeMap;
+        }
+
+        public DefaultValueExpressionType(Cloner cloner, DefaultValueExpressionType original) : base(cloner, original)
+        {
+            typeMap = original.typeMap;
+        }
+
+        public DefaultValueExpressionType Clone(Cloner cloner)
+        {
+            return new DefaultValueExpressionType(cloner, this);
+        }
+
+        protected override Dictionary<TypeParameter, Type> GetTypeMap()
+        {
+            return typeMap;
+        }
+    }
+
+    public class DefaultValueExpressionPreType : DefaultValueExpression, ICloneable<DefaultValueExpressionPreType>
+    {
+        private readonly Dictionary<TypeParameter, PreType> preTypeMap;
+
+        public DefaultValueExpressionPreType(IToken tok, Formal formal,
+          Expression/*?*/ receiver, Dictionary<IVariable, Expression> substMap, Dictionary<TypeParameter, PreType> preTypeMap)
+          : base(tok, formal, receiver, substMap)
+        {
+            this.preTypeMap = preTypeMap;
+        }
+
+        public DefaultValueExpressionPreType(Cloner cloner, DefaultValueExpressionPreType original) : base(cloner, original)
+        {
+            preTypeMap = original.preTypeMap;
+        }
+
+        public DefaultValueExpressionPreType Clone(Cloner cloner)
+        {
+            return new DefaultValueExpressionPreType(cloner, this);
+        }
+
+        protected override Dictionary<TypeParameter, Type> GetTypeMap()
+        {
+            return preTypeMap.ToDictionary(
+              x => x.Key,
+              x => PreType2TypeUtil.PreType2FixedType(x.Value));
+        }
+    }
 }

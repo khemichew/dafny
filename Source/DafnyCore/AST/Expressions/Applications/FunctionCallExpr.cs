@@ -1,152 +1,211 @@
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+namespace MutateCSharp
+{
+    internal class Schemata11
+    {
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT11");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
 
-namespace Microsoft.Dafny;
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
+        }
+        internal static bool ReplaceBinExprOp_0(long mutantId, Microsoft.Dafny.IToken argument1, object argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            return argument1 != argument2;
+        }
 
-public class FunctionCallExpr : Expression, IHasUsages, ICloneable<FunctionCallExpr> {
-  public string Name;
-  public readonly Expression Receiver;
-  public readonly IToken OpenParen;  // can be null if Args.Count == 0
-  public readonly IToken CloseParen;
-  public readonly Label/*?*/ AtLabel;
-  public readonly ActualBindings Bindings;
-  public List<Expression> Args => Bindings.Arguments;
-  [FilledInDuringResolution] public List<PreType> PreTypeApplication_AtEnclosingClass;
-  [FilledInDuringResolution] public List<PreType> PreTypeApplication_JustFunction;
-  [FilledInDuringResolution] public List<Type> TypeApplication_AtEnclosingClass;
-  [FilledInDuringResolution] public List<Type> TypeApplication_JustFunction;
-  [FilledInDuringResolution] public bool IsByMethodCall;
+        internal static bool ReplaceBinExprOp_1(long mutantId, Microsoft.Dafny.IToken argument1, object argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            return argument1 == argument2;
+        }
 
-  /// <summary>
-  /// Return a mapping from each type parameter of the function and its enclosing class to actual type arguments.
-  /// This method should only be called on fully and successfully resolved FunctionCallExpr's.
-  /// </summary>
-  public Dictionary<TypeParameter, Type> GetTypeArgumentSubstitutions() {
-    return TypeArgumentSubstitutionsWithParents();
-  }
+        internal static int ReplaceNumericConstant_2(long mutantId, int argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 3)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 + 1; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 - 1; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return -argument1; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return 0; }
+            return argument1;
+        }
 
-  /// <summary>
-  /// Returns a mapping from formal type parameters to actual type arguments. For example, given
-  ///     trait T<A> {
-  ///       function F<X>(): bv8 { ... }
-  ///     }
-  ///     class C<B, D> extends T<map<B, D>> { }
-  /// and FunctionCallExpr o.F<int>(args) where o has type C<real, bool>, the type map returned is
-  ///     A -> map<real, bool>
-  ///     B -> real
-  ///     D -> bool
-  ///     X -> int
-  /// NOTE: This method should be called only when all types have been fully and successfully
-  /// resolved.
-  /// </summary>
-  public Dictionary<TypeParameter, Type> TypeArgumentSubstitutionsWithParents() {
-    Contract.Requires(WasResolved());
-    Contract.Ensures(Contract.Result<Dictionary<TypeParameter, Type>>() != null);
-
-    return MemberSelectExpr.TypeArgumentSubstitutionsWithParentsAux(Receiver.Type, Function, TypeApplication_JustFunction);
-  }
-
-  public enum CoCallResolution {
-    No,
-    Yes,
-    NoBecauseFunctionHasSideEffects,
-    NoBecauseFunctionHasPostcondition,
-    NoBecauseRecursiveCallsAreNotAllowedInThisContext,
-    NoBecauseIsNotGuarded,
-    NoBecauseRecursiveCallsInDestructiveContext
-  }
-  [FilledInDuringResolution] public CoCallResolution CoCall = CoCallResolution.No;  // indicates whether or not the call is a co-recursive call
-  [FilledInDuringResolution] public string CoCallHint = null;  // possible additional hint that can be used in verifier error message
-
-  [ContractInvariantMethod]
-  void ObjectInvariant() {
-    Contract.Invariant(Name != null);
-    Contract.Invariant(Receiver != null);
-    Contract.Invariant(cce.NonNullElements(Args));
-    Contract.Invariant(
-      Function == null || TypeApplication_AtEnclosingClass == null ||
-      Function.EnclosingClass.TypeArgs.Count == TypeApplication_AtEnclosingClass.Count);
-    Contract.Invariant(
-      Function == null || TypeApplication_JustFunction == null ||
-      Function.TypeArgs.Count == TypeApplication_JustFunction.Count);
-  }
-
-  [FilledInDuringResolution] public Function Function;
-
-  public FunctionCallExpr(IToken tok, string fn, Expression receiver, IToken openParen, IToken closeParen, [Captured] List<ActualBinding> args, Label/*?*/ atLabel = null)
-    : this(tok, fn, receiver, openParen, closeParen, new ActualBindings(args), atLabel) {
-    Contract.Requires(tok != null);
-    Contract.Requires(fn != null);
-    Contract.Requires(receiver != null);
-    Contract.Requires(cce.NonNullElements(args));
-    Contract.Requires(openParen != null || args.Count == 0);
-    Contract.Ensures(type == null);
-  }
-
-  public FunctionCallExpr(IToken tok, string fn, Expression receiver, IToken openParen, IToken closeParen, [Captured] ActualBindings bindings, Label/*?*/ atLabel = null)
-    : base(tok) {
-    Contract.Requires(tok != null);
-    Contract.Requires(fn != null);
-    Contract.Requires(receiver != null);
-    Contract.Requires(bindings != null);
-    Contract.Requires(openParen != null);
-    Contract.Ensures(type == null);
-
-    this.Name = fn;
-    this.Receiver = receiver;
-    this.OpenParen = openParen;
-    this.CloseParen = closeParen;
-    this.AtLabel = atLabel;
-    this.Bindings = bindings;
-    this.FormatTokens = closeParen != null ? new[] { closeParen } : null;
-  }
-
-  /// <summary>
-  /// This constructor is intended to be used when constructing a resolved FunctionCallExpr. The "args" are expected
-  /// to be already resolved, and are all given positionally.
-  /// </summary>
-  public FunctionCallExpr(IToken tok, string fn, Expression receiver, IToken openParen, IToken closeParen, [Captured] List<Expression> args,
-    Label /*?*/ atLabel = null)
-    : this(tok, fn, receiver, openParen, closeParen, args.ConvertAll(e => new ActualBinding(null, e)), atLabel) {
-    Bindings.AcceptArgumentExpressionsAsExactParameterList();
-  }
-
-  public FunctionCallExpr Clone(Cloner cloner) {
-    return new FunctionCallExpr(cloner, this);
-  }
-
-  public FunctionCallExpr(Cloner cloner, FunctionCallExpr original) : base(cloner, original) {
-    Name = original.Name;
-    Receiver = cloner.CloneExpr(original.Receiver);
-    OpenParen = original.OpenParen == null ? null : cloner.Tok(original.OpenParen);
-    CloseParen = original.CloseParen == null ? null : cloner.Tok(original.CloseParen);
-    Bindings = new ActualBindings(cloner, original.Bindings);
-    AtLabel = original.AtLabel;
-
-    if (cloner.CloneResolvedFields) {
-      TypeApplication_AtEnclosingClass = original.TypeApplication_AtEnclosingClass;
-      TypeApplication_JustFunction = original.TypeApplication_JustFunction;
-      IsByMethodCall = original.IsByMethodCall;
-      Function = original.Function;
-      CoCall = original.CoCall;
-      CoCallHint = original.CoCallHint;
     }
-  }
+}
 
-  public override IEnumerable<Expression> SubExpressions {
-    get {
-      yield return Receiver;
-      foreach (var e in Args) {
-        yield return e;
-      }
+namespace Microsoft.Dafny
+{
+    public class FunctionCallExpr : Expression, IHasUsages, ICloneable<FunctionCallExpr>
+    {
+        public string Name;
+        public readonly Expression Receiver;
+        public readonly IToken OpenParen;  // can be null if Args.Count == 0
+        public readonly IToken CloseParen;
+        public readonly Label/*?*/ AtLabel;
+        public readonly ActualBindings Bindings;
+        public List<Expression> Args => Bindings.Arguments;
+        [FilledInDuringResolution] public List<PreType> PreTypeApplication_AtEnclosingClass;
+        [FilledInDuringResolution] public List<PreType> PreTypeApplication_JustFunction;
+        [FilledInDuringResolution] public List<Type> TypeApplication_AtEnclosingClass;
+        [FilledInDuringResolution] public List<Type> TypeApplication_JustFunction;
+        [FilledInDuringResolution] public bool IsByMethodCall;
+
+        /// <summary>
+        /// Return a mapping from each type parameter of the function and its enclosing class to actual type arguments.
+        /// This method should only be called on fully and successfully resolved FunctionCallExpr's.
+        /// </summary>
+        public Dictionary<TypeParameter, Type> GetTypeArgumentSubstitutions()
+        {
+            return TypeArgumentSubstitutionsWithParents();
+        }
+
+        /// <summary>
+        /// Returns a mapping from formal type parameters to actual type arguments. For example, given
+        ///     trait T<A> {
+        ///       function F<X>(): bv8 { ... }
+        ///     }
+        ///     class C<B, D> extends T<map<B, D>> { }
+        /// and FunctionCallExpr o.F<int>(args) where o has type C<real, bool>, the type map returned is
+        ///     A -> map<real, bool>
+        ///     B -> real
+        ///     D -> bool
+        ///     X -> int
+        /// NOTE: This method should be called only when all types have been fully and successfully
+        /// resolved.
+        /// </summary>
+        public Dictionary<TypeParameter, Type> TypeArgumentSubstitutionsWithParents()
+        {
+            Contract.Requires(WasResolved());
+            Contract.Ensures(Contract.Result<Dictionary<TypeParameter, Type>>() != null);
+
+            return MemberSelectExpr.TypeArgumentSubstitutionsWithParentsAux(Receiver.Type, Function, TypeApplication_JustFunction);
+        }
+
+        public enum CoCallResolution
+        {
+            No,
+            Yes,
+            NoBecauseFunctionHasSideEffects,
+            NoBecauseFunctionHasPostcondition,
+            NoBecauseRecursiveCallsAreNotAllowedInThisContext,
+            NoBecauseIsNotGuarded,
+            NoBecauseRecursiveCallsInDestructiveContext
+        }
+        [FilledInDuringResolution] public CoCallResolution CoCall = CoCallResolution.No;  // indicates whether or not the call is a co-recursive call
+        [FilledInDuringResolution] public string CoCallHint = null;  // possible additional hint that can be used in verifier error message
+
+        [ContractInvariantMethod]
+        void ObjectInvariant()
+        {
+            Contract.Invariant(Name != null);
+            Contract.Invariant(Receiver != null);
+            Contract.Invariant(cce.NonNullElements(Args));
+            Contract.Invariant(
+              Function == null || TypeApplication_AtEnclosingClass == null ||
+              Function.EnclosingClass.TypeArgs.Count == TypeApplication_AtEnclosingClass.Count);
+            Contract.Invariant(
+              Function == null || TypeApplication_JustFunction == null ||
+              Function.TypeArgs.Count == TypeApplication_JustFunction.Count);
+        }
+
+        [FilledInDuringResolution] public Function Function;
+
+        public FunctionCallExpr(IToken tok, string fn, Expression receiver, IToken openParen, IToken closeParen, [Captured] List<ActualBinding> args, Label/*?*/ atLabel = null)
+          : this(tok, fn, receiver, openParen, closeParen, new ActualBindings(args), atLabel)
+        {
+            Contract.Requires(tok != null);
+            Contract.Requires(fn != null);
+            Contract.Requires(receiver != null);
+            Contract.Requires(cce.NonNullElements(args));
+            Contract.Requires(openParen != null || args.Count == 0);
+            Contract.Ensures(type == null);
+        }
+
+        public FunctionCallExpr(IToken tok, string fn, Expression receiver, IToken openParen, IToken closeParen, [Captured] ActualBindings bindings, Label/*?*/ atLabel = null)
+          : base(tok)
+        {
+            Contract.Requires(tok != null);
+            Contract.Requires(fn != null);
+            Contract.Requires(receiver != null);
+            Contract.Requires(bindings != null);
+            Contract.Requires(openParen != null);
+            Contract.Ensures(type == null);
+
+            this.Name = fn;
+            this.Receiver = receiver;
+            this.OpenParen = openParen;
+            this.CloseParen = closeParen;
+            this.AtLabel = atLabel;
+            this.Bindings = bindings;
+            this.FormatTokens = MutateCSharp.Schemata11.ReplaceBinExprOp_0(1L, closeParen, null) ? new[] { closeParen } : null;
+        }
+
+        /// <summary>
+        /// This constructor is intended to be used when constructing a resolved FunctionCallExpr. The "args" are expected
+        /// to be already resolved, and are all given positionally.
+        /// </summary>
+        public FunctionCallExpr(IToken tok, string fn, Expression receiver, IToken openParen, IToken closeParen, [Captured] List<Expression> args,
+          Label /*?*/ atLabel = null)
+          : this(tok, fn, receiver, openParen, closeParen, args.ConvertAll(e => new ActualBinding(null, e)), atLabel)
+        {
+            Bindings.AcceptArgumentExpressionsAsExactParameterList();
+        }
+
+        public FunctionCallExpr Clone(Cloner cloner)
+        {
+            return new FunctionCallExpr(cloner, this);
+        }
+
+        public FunctionCallExpr(Cloner cloner, FunctionCallExpr original) : base(cloner, original)
+        {
+            Name = original.Name;
+            Receiver = cloner.CloneExpr(original.Receiver);
+            OpenParen = MutateCSharp.Schemata11.ReplaceBinExprOp_1(2L, original.OpenParen, null) ? null : cloner.Tok(original.OpenParen);
+            CloseParen = MutateCSharp.Schemata11.ReplaceBinExprOp_1(3L, original.CloseParen, null) ? null : cloner.Tok(original.CloseParen);
+            Bindings = new ActualBindings(cloner, original.Bindings);
+            AtLabel = original.AtLabel;
+
+            if (cloner.CloneResolvedFields)
+            {
+                TypeApplication_AtEnclosingClass = original.TypeApplication_AtEnclosingClass;
+                TypeApplication_JustFunction = original.TypeApplication_JustFunction;
+                IsByMethodCall = original.IsByMethodCall;
+                Function = original.Function;
+                CoCall = original.CoCall;
+                CoCallHint = original.CoCallHint;
+            }
+        }
+
+        public override IEnumerable<Expression> SubExpressions
+        {
+            get
+            {
+                yield return Receiver;
+                foreach (var e in Args)
+                {
+                    yield return e;
+                }
+
+                yield break;
+            }
+        }
+
+        public override IEnumerable<Type> ComponentTypes => Util.Concat(TypeApplication_AtEnclosingClass, TypeApplication_JustFunction);
+        public IEnumerable<IDeclarationOrUsage> GetResolvedDeclarations()
+        {
+            return Enumerable.Repeat(Function, MutateCSharp.Schemata11.ReplaceNumericConstant_2(4L, 1));
+        }
+
+        public IToken NameToken => tok;
     }
-  }
-
-  public override IEnumerable<Type> ComponentTypes => Util.Concat(TypeApplication_AtEnclosingClass, TypeApplication_JustFunction);
-  public IEnumerable<IDeclarationOrUsage> GetResolvedDeclarations() {
-    return Enumerable.Repeat(Function, 1);
-  }
-
-  public IToken NameToken => tok;
 }

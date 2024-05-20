@@ -2,8 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Microsoft.Dafny.Triggers;
-
-internal struct TriggerMatch {
+public struct TriggerMatch {
   internal Expression Expr;
   internal Expression OriginalExpr;
   internal Dictionary<IVariable, Expression> Bindings;

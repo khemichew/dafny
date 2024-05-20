@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 namespace Microsoft.Dafny;
-
+public 
 class ClonerButIVariablesAreKeptOnce : ClonerKeepParensExpressions {
   private readonly HashSet<IVariable> alreadyCloned = new();
 

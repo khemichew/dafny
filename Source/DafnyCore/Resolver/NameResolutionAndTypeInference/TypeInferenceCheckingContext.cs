@@ -1,5 +1,5 @@
 namespace Microsoft.Dafny;
-
+public 
 class TypeInferenceCheckingContext : IASTVisitorContext {
   private readonly IASTVisitorContext astVisitorContext;
 

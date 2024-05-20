@@ -17,864 +17,1294 @@ using Microsoft.Dafny;
 using Microsoft.Dafny.Compilers;
 using Microsoft.Dafny.Plugins;
 using Bpl = Microsoft.Boogie;
+namespace MutateCSharp
+{
+    internal class Schemata270
+    {
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT270");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
 
-namespace Microsoft.Dafny {
-  public enum FunctionSyntaxOptions {
-    Version3,
-    Migration3To4,
-    ExperimentalTreatUnspecifiedAsGhost,
-    ExperimentalTreatUnspecifiedAsCompiled,
-    ExperimentalPredicateAlwaysGhost,
-    Version4,
-  }
-
-  public enum QuantifierSyntaxOptions {
-    Version3,
-    Version4,
-  }
-
-  public record Options(IDictionary<Option, object> OptionArguments, IDictionary<Argument, object> Arguments);
-
-  public class DafnyOptions : Bpl.CommandLineOptions {
-
-    public string GetPrintPath(string path) => UseBaseNameForFileName ? Path.GetFileName(path) : path;
-    public TextWriter ErrorWriter { get; set; }
-    public TextReader Input { get; }
-    public static readonly DafnyOptions Default = new(TextReader.Null, TextWriter.Null, TextWriter.Null);
-
-    public IList<Uri> CliRootSourceUris = new List<Uri>();
-
-    public DafnyProject DafnyProject { get; set; }
-
-    public static void ParseDefaultFunctionOpacity(Option<CommonOptionBag.DefaultFunctionOpacityOptions> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      if (ps.ConfirmArgumentCount(1)) {
-        if (ps.args[ps.i].Equals("transparent")) {
-          options.Set(option, CommonOptionBag.DefaultFunctionOpacityOptions.Transparent);
-        } else if (ps.args[ps.i].Equals("autoRevealDependencies")) {
-          options.Set(option, CommonOptionBag.DefaultFunctionOpacityOptions.AutoRevealDependencies);
-        } else if (ps.args[ps.i].Equals("opaque")) {
-          options.Set(option, CommonOptionBag.DefaultFunctionOpacityOptions.Opaque);
-        } else {
-          InvalidArgumentError(option.Name, ps);
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
         }
-      }
-    }
-
-    public void ApplyBinding(Option option) {
-      if (legacyBindings.ContainsKey(option)) {
-        legacyBindings[option](this, Get(option));
-      }
-    }
-
-    public T Get<T>(Argument<T> argument) {
-      return (T)Options.Arguments.GetOrCreate(argument, () => default(T));
-    }
-
-
-    public T Get<T>(Option<T> option) {
-      return (T)Options.OptionArguments.GetOrCreate(option, () => default(T));
-    }
-
-    public object Get(Option option) {
-      return Options.OptionArguments[option];
-    }
-
-    public void SetUntyped(Option option, object value) {
-      Options.OptionArguments[option] = value;
-    }
-
-    public void Set<T>(Option<T> option, T value) {
-      Options.OptionArguments[option] = value;
-    }
-
-    protected override void AddFile(string file, Bpl.CommandLineParseState ps) {
-      CliRootSourceUris.Add(new Uri(Path.GetFullPath(file)));
-      base.AddFile(file, ps);
-    }
-
-    private static Dictionary<Option, Action<DafnyOptions, object>> legacyBindings = new();
-    public static void RegisterLegacyBinding<T>(Option<T> option, Action<DafnyOptions, T> bind) {
-      legacyBindings[option] = (options, o) => bind(options, (T)o);
-    }
-
-    public static void ParseFileInfo(Option<FileInfo> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      if (ps.ConfirmArgumentCount(1)) {
-        options.Set(option, new FileInfo(ps.args[ps.i]));
-      }
-    }
-
-    public static void ParseFileInfoElement(Option<IList<FileInfo>> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      var value = (IList<FileInfo>)options.Options.OptionArguments.GetOrCreate(option, () => new List<FileInfo>());
-      if (ps.ConfirmArgumentCount(1)) {
-        value.Add(new FileInfo(ps.args[ps.i]));
-      }
-    }
-
-    public static void ParseString(Option<string> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      if (ps.ConfirmArgumentCount(1)) {
-        options.Set(option, ps.args[ps.i]);
-      }
-    }
-
-    public static void ParseStringElement(Option<IList<string>> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      var value = (IList<string>)options.Options.OptionArguments.GetOrCreate(option, () => new List<string>());
-      if (ps.ConfirmArgumentCount(1)) {
-        value.Add(ps.args[ps.i]);
-      }
-    }
-
-    public static void ParseImplicitEnable(Option<bool> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      options.Set(option, true);
-    }
-
-    public static void ParseBoolean(Option<bool> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      int result = 0;
-      if (ps.GetIntArgument(ref result, 2)) {
-        options.Set(option, result == 1);
-      }
-    }
-
-    public static void ParseGeneralTraitsOption(Option<CommonOptionBag.GeneralTraitsOptions> option, Bpl.CommandLineParseState ps, DafnyOptions options) {
-      if (ps.ConfirmArgumentCount(1)) {
-        switch (ps.args[ps.i]) {
-          case "legacy":
-            options.Set(option, CommonOptionBag.GeneralTraitsOptions.Legacy);
-            break;
-          case "datatype":
-            options.Set(option, CommonOptionBag.GeneralTraitsOptions.Datatype);
-            break;
-          case "full":
-            options.Set(option, CommonOptionBag.GeneralTraitsOptions.Full);
-            break;
-          default:
-            InvalidArgumentError(option.Name, ps);
-            break;
+        internal static int ReplaceNumericConstant_0(long mutantId, int argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 3)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 + 1; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 - 1; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return -argument1; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return 0; }
+            return argument1;
         }
-      }
-    }
 
-    private static readonly List<LegacyUiForOption> LegacyUis = new();
-
-    public static void RegisterLegacyUi<T>(Option<T> option,
-      Action<Option<T>, Bpl.CommandLineParseState, DafnyOptions> parse,
-      string category, string legacyName = null, string legacyDescription = null, T defaultValue = default(T), string argumentName = null) {
-      LegacyUis.Add(new LegacyUiForOption(
-        option,
-        (state, options) => parse(option, state, options),
-        category,
-        legacyName ?? option.Name,
-        legacyDescription ?? option.Description,
-        argumentName ?? option.ArgumentHelpName ?? "value",
-        defaultValue));
-    }
-
-    private static DafnyOptions defaultImmutableOptions;
-    public static DafnyOptions DefaultImmutableOptions => defaultImmutableOptions ??= CreateUsingOldParser(Console.Out, Console.In);
-
-    public static DafnyOptions CreateUsingOldParser(TextWriter outputWriter, TextReader input = null, params string[] arguments) {
-      input ??= TextReader.Null;
-      var result = new DafnyOptions(input, outputWriter, outputWriter);
-      result.Parse(arguments);
-      return result;
-    }
-
-    public override bool Parse(string[] arguments) {
-      int i;
-      for (i = 0; i < arguments.Length; i++) {
-        if (arguments[i] == "--args") {
-          break;
+        internal static bool ReplaceBinExprOp_4(long mutantId, int argument1, int argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 4)) { return argument1 < argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1 <= argument2; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1 > argument2; }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1 >= argument2; }
+            return argument1 < argument2;
         }
-      }
 
-      try {
-        if (i >= arguments.Length) {
-          return BaseParse(arguments, true);
+        internal static bool ReplaceBinExprOp_3(long mutantId, int argument1, int argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 4)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 < argument2; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1 <= argument2; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1 > argument2; }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1 >= argument2; }
+            return argument1 == argument2;
         }
-        MainArgs = arguments.Skip(i + 1).ToList();
-        return BaseParse(arguments.Take(i).ToArray(), true);
-      } catch (Exception e) {
-        ErrorWriter.WriteLine("Invalid filename: " + e.Message);
-        return false;
-      }
-    }
 
-    protected override Bpl.CommandLineParseState InitializeCommandLineParseState(string[] args) {
-      return new TextWriterParseState(args, ToolName, ErrorWriter);
-    }
-
-    /// <summary>
-    /// Needed because the Boogie version writes to Console.Error
-    /// </summary>
-    class TextWriterParseState : Bpl.CommandLineParseState {
-      private readonly TextWriter errorWriter;
-
-      public TextWriterParseState(string[] args, string toolName, TextWriter errorWriter) : base(args, toolName) {
-        this.errorWriter = errorWriter;
-      }
-
-      public override void Error(string message, params string[] args) {
-        errorWriter.WriteLine("{0}: Error: {1}", ToolName, string.Format(message, args));
-        EncounteredErrors = true;
-      }
-    }
-
-    /// <summary>
-    /// Customized version of Microsoft.Boogie.CommandLineOptions.Parse
-    /// Needed because the Boogie version writes to Console.Error
-    /// </summary>
-    public bool BaseParse(string[] args, bool allowFile) {
-      Environment = Environment + "Command Line Options: " + string.Join(" ", args);
-      args = cce.NonNull<string[]>((string[])args.Clone());
-      Bpl.CommandLineParseState state;
-      for (state = InitializeCommandLineParseState(args); state.i < args.Length; state.i = state.nextIndex) {
-        cce.LoopInvariant(state.args == args);
-        string file = args[state.i];
-        state.s = file.Trim();
-        bool flag = state.s.StartsWith("-") || state.s.StartsWith("/");
-        int length = state.s.IndexOf(':');
-        if (0 <= length & flag) {
-          state.hasColonArgument = true;
-          args[state.i] = state.s.Substring(length + 1);
-          state.s = state.s.Substring(0, length);
-        } else {
-          ++state.i;
-          state.hasColonArgument = false;
+        internal static int ReplacePostfixUnaryExprOp_5(long mutantId, ref int argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1++; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1--; }
+            return argument1++;
         }
-        state.nextIndex = state.i;
-        if (flag) {
-          if (!ParseOption(state.s.Substring(1), state)) {
-            if (Path.DirectorySeparatorChar == '/' && state.s.StartsWith("/")) {
-              AddFile(file, state);
-            } else {
-              UnknownSwitch(state);
-            }
-          }
-        } else if (allowFile) {
-          AddFile(file, state);
-        } else {
-          state.Error($"Boogie option '{state.s}' must start with - or /");
+
+        internal static bool ReplaceBinExprOp_7(long mutantId, int argument1, int argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 4)) { return argument1 >= argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1 < argument2; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1 <= argument2; }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1 > argument2; }
+            return argument1 >= argument2;
         }
-      }
-      if (state.EncounteredErrors) {
-        ErrorWriter.WriteLine("Use /help for available options");
-        return false;
-      }
-      ApplyDefaultOptions();
-      return true;
-    }
 
-    public DafnyOptions(TextReader inputReader, TextWriter outputWriter, TextWriter errorWriter)
-      : base(outputWriter, "dafny", "Dafny program verifier", new Bpl.ConsolePrinter()) {
-      Input = inputReader;
-      ErrorWriter = errorWriter;
-      ErrorTrace = 0;
-      Prune = true;
-      TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Arguments;
-      NormalizeNames = true;
-      EmitDebugInformation = false;
-      Backend = new CsharpBackend(this);
-      Printer = new NullPrinter();
-    }
-
-    public override string VersionNumber {
-      get {
-        return FileVersionInfo
-          .GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
-      }
-    }
-
-    public Options Options { get; set; } = new(new Dictionary<Option, object>(), new Dictionary<Argument, object>());
-
-    public override string Version {
-      get { return ToolName + VersionSuffix; }
-    }
-
-    public override string VersionSuffix {
-      get { return " " + VersionNumber; }
-    }
-
-    public bool RunLanguageServer { get; set; }
-
-    public enum DiagnosticsFormats {
-      PlainText,
-      JSON,
-    }
-
-    public bool UsingNewCli = false;
-    public bool UnicodeOutput = false;
-    public DiagnosticsFormats DiagnosticsFormat = DiagnosticsFormats.PlainText;
-    public bool DisallowSoundnessCheating = false;
-    public int Induction = 4;
-    public int InductionHeuristic = 6;
-    public string DafnyPrelude = null;
-    public string DafnyPrintFile = null;
-    public bool AllowSourceFolders = false;
-    public List<string> SourceFolders { get; } = new(); // list of folders, for those commands that permit processing all source files in folders
-
-    public enum ContractTestingMode {
-      None,
-      Externs,
-      TestedExterns,
-    }
-
-    public PrintModes PrintMode = PrintModes.Everything; // Default to printing everything
-    public bool DafnyVerify = true;
-    public string DafnyPrintResolvedFile = null;
-    public List<string> DafnyPrintExportedViews = new List<string>();
-    public bool Compile = true;
-    public List<string> MainArgs = new List<string>();
-    public bool FormatCheck = false;
-
-    public string CompilerName;
-    public IExecutableBackend Backend;
-    public bool Verbose = true;
-    public bool EnforcePrintEffects = false;
-    public string DafnyPrintCompiledFile = null;
-    public string CoverageLegendFile = null;
-    public string MainMethod = null;
-    public bool ForceCompile = false;
-    public bool RunAfterCompile = false;
-    public uint SpillTargetCode = 0; // [0..4]
-    public bool DisallowIncludes = false;
-    public bool DisallowExterns = false;
-    public bool AllowExterns => !DisallowExterns;
-    public bool DisableNLarith = false;
-    public int ArithMode = 1; // [0..10]
-    public string AutoReqPrintFile = null;
-    public bool ignoreAutoReq = false;
-    public bool Optimize = false;
-    public bool AutoTriggers = true;
-    public bool RewriteFocalPredicates = true;
-    public bool PrintTooltips = false;
-    public bool PrintStats = false;
-    public string MethodsToTest = null;
-    public bool DisallowConstructorCaseWithoutParentheses = false;
-    public bool PrintFunctionCallGraph = false;
-    public bool WarnShadowing = false;
-    public FunctionSyntaxOptions FunctionSyntax = FunctionSyntaxOptions.Version4;
-    public QuantifierSyntaxOptions QuantifierSyntax = QuantifierSyntaxOptions.Version4;
-    public int DefiniteAssignmentLevel = 1; // [0..5] 2 and 3 have the same effect, 4 turns off an array initialisation check and field initialization check, unless --enforce-determinism is used.
-    public HashSet<string> LibraryFiles { get; set; } = new();
-    public ContractTestingMode TestContracts = ContractTestingMode.None;
-
-    public bool ForbidNondeterminism { get; set; }
-
-    public int DeprecationNoise = 1;
-    public bool VerifyAllModules = false;
-    public bool SeparateModuleOutput = false;
-
-    public enum IncludesModes {
-      None,
-      Immediate,
-      Transitive
-    }
-
-    public IncludesModes PrintIncludesMode = IncludesModes.None;
-    public int OptimizeResolution = 2;
-    public bool IncludeRuntime = true;
-    public CommonOptionBag.SystemModuleMode SystemModuleTranslationMode = CommonOptionBag.SystemModuleMode.Omit;
-    public bool UseJavadocLikeDocstringRewriter = false;
-    public bool DisableScopes = false;
-    public bool UseStdin = false;
-    public bool FailOnWarnings = false;
-    [CanBeNull] private TestGenerationOptions testGenOptions = null;
-    public bool ExtractCounterexample = false;
-
-    public bool ShowProofObligationExpressions = false;
-
-    public bool AuditProgram = false;
-
-    public static string DefaultZ3Version = "4.12.1";
-    // Not directly user-configurable, only recorded once we discover it
-    public string SolverIdentifier { get; private set; }
-    public Version SolverVersion { get; set; }
-
-    public static readonly ReadOnlyCollection<Plugin> DefaultPlugins =
-      new(new[] { SinglePassCodeGenerator.Plugin, InternalDocstringRewritersPluginConfiguration.Plugin });
-    private IList<Plugin> cliPluginCache;
-    public IList<Plugin> Plugins => cliPluginCache ??= ComputePlugins(AdditionalPlugins, AdditionalPluginArguments);
-    public List<Plugin> AdditionalPlugins = new();
-    public IList<string> AdditionalPluginArguments = new List<string>();
-
-    public static IList<Plugin> ComputePlugins(List<Plugin> additionalPlugins, IList<string> allArguments) {
-      var result = new List<Plugin>(DefaultPlugins.Concat(additionalPlugins));
-      foreach (var pluginAndArgument in allArguments) {
-        try {
-          var pluginArray = pluginAndArgument.Split(',');
-          var pluginPath = pluginArray[0];
-          var arguments = Array.Empty<string>();
-          if (pluginArray.Length >= 2) {
-            // There are no commas in paths, but there can be in arguments
-            var argumentsString = string.Join(',', pluginArray.Skip(1));
-            // Parse arguments, accepting and remove double quotes that isolate long arguments
-            arguments = ParsePluginArguments(argumentsString);
-          }
-
-          result.Add(AssemblyPlugin.Load(pluginPath, arguments));
-        } catch (Exception e) {
-          result.Add(new ErrorPlugin(pluginAndArgument, e));
+        internal static bool ReplaceBinExprOp_16(long mutantId, System.PlatformID argument1, System.PlatformID argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            return argument1 == argument2;
         }
-      }
 
-      return result;
-    }
-
-    private static string[] ParsePluginArguments(string argumentsString) {
-      var splitter = new Regex(@"""(?<escapedArgument>(?:[^""\\]|\\\\|\\"")*)""|(?<rawArgument>[^ ]+)");
-      var escapedChars = new Regex(@"(?<escapedDoubleQuote>\\"")|\\\\");
-      return splitter.Matches(argumentsString).Select(
-        matchResult =>
-          matchResult.Groups["escapedArgument"].Success
-            ? escapedChars.Replace(matchResult.Groups["escapedArgument"].Value,
-              matchResult2 => matchResult2.Groups["escapedDoubleQuote"].Success ? "\"" : "\\")
-            : matchResult.Groups["rawArgument"].Value
-      ).ToArray();
-    }
-
-    public static bool TryParseResourceCount(string value, out uint result) {
-      return uint.TryParse(value, NumberStyles.AllowExponent, null, out result);
-    }
-
-    /// <summary>
-    /// Automatic shallow-copy constructor
-    /// </summary>
-    public DafnyOptions(DafnyOptions src, bool useNullWriters = false) : this(
-      src.Input, src.OutputWriter, src.ErrorWriter) {
-      src.CopyTo(this, useNullWriters);
-      CliRootSourceUris = new List<Uri>(src.CliRootSourceUris);
-      ProverOptions = new List<string>(src.ProverOptions);
-      Options = new Options(
-        src.Options.OptionArguments.ToDictionary(kv => kv.Key, kv => kv.Value),
-        src.Options.Arguments.ToDictionary(kv => kv.Key, kv => kv.Value));
-    }
-
-    private void CopyTo(DafnyOptions dst, bool useNullWriters) {
-      var type = typeof(DafnyOptions);
-      while (type != null) {
-        var fields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-        foreach (var fi in fields) {
-          var value = fi.GetValue(this);
-          // This hacky code is necessary until we switch to a Boogie version that implements https://github.com/boogie-org/boogie/pull/788
-          if (useNullWriters && fi.Name is "<ErrorWriter>k__BackingField" or "<OutputWriter>k__BackingField") {
-            value = TextWriter.Null;
-          }
-          fi.SetValue(dst, value);
+        internal static bool ReplaceBinExprOp_15(long mutantId, System.Type argument1, object argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            return argument1 != argument2;
         }
-        type = type.BaseType;
-      }
-    }
 
-    public virtual TestGenerationOptions TestGenOptions =>
-      testGenOptions ??= new TestGenerationOptions();
-
-    protected override bool ParseOption(string name, Bpl.CommandLineParseState ps) {
-      if (ParseDafnySpecificOption(name, ps)) {
-        return true;
-      }
-
-      foreach (var option in LegacyUis.Where(o => o.Name == name)) {
-        option.Parse(ps, this);
-        return true;
-      }
-
-      return ParseBoogieOption(name, ps);
-    }
-
-    private bool ParseBoogieOption(string name, Bpl.CommandLineParseState ps) {
-      return base.ParseOption(name, ps);
-    }
-
-    public override string Help => "Use 'dafny --help' to see help for the new Dafny CLI format.\n" +
-      LegacyUiForOption.GenerateHelp(base.Help, LegacyUis, true);
-
-    protected bool ParseDafnySpecificOption(string name, Bpl.CommandLineParseState ps) {
-      var args = ps.args; // convenient synonym
-      switch (name) {
-
-        case "view":
-          if (ps.ConfirmArgumentCount(1)) {
-            DafnyPrintExportedViews = args[ps.i].Split(',').ToList();
-          }
-
-          return true;
-
-        case "compile": {
-            int compile = 0;
-            if (ps.GetIntArgument(ref compile, 5)) {
-              // convert option to two booleans
-              Compile = compile != 0;
-              ForceCompile = compile == 2 || compile == 4;
-              RunAfterCompile = compile == 3 || compile == 4;
-            }
-
-            return true;
-          }
-
-        case "compileVerbose": {
-            int verbosity = 0;
-            if (ps.GetIntArgument(ref verbosity, 2)) {
-              Verbose = verbosity == 1;
-            }
-
-            return true;
-          }
-
-        case "trackPrintEffects": {
-            int printEffects = 0;
-            if (ps.GetIntArgument(ref printEffects, 2)) {
-              EnforcePrintEffects = printEffects == 1;
-            }
-
-            return true;
-          }
-
-        case "Main":
-        case "main": {
-            if (ps.ConfirmArgumentCount(1)) {
-              MainMethod = args[ps.i];
-            }
-
-            return true;
-          }
-
-        case "check": {
-            if (!ps.hasColonArgument || ps.ConfirmArgumentCount(1)) {
-              FormatCheck = !ps.hasColonArgument || args[ps.i] == "1";
-            }
-
-            return true;
-          }
-
-        case "dafnyVerify": {
-            int verify = 0;
-            if (ps.GetIntArgument(ref verify, 2)) {
-              DafnyVerify = verify != 0; // convert to boolean
-            }
-
-            return true;
-          }
-
-        case "diagnosticsFormat": {
-            if (ps.ConfirmArgumentCount(1)) {
-              switch (args[ps.i]) {
-                case "json":
-                  Printer = new DafnyJsonConsolePrinter(this);
-                  DiagnosticsFormat = DiagnosticsFormats.JSON;
-                  break;
-                case "text":
-                  Printer = new DafnyConsolePrinter(this);
-                  DiagnosticsFormat = DiagnosticsFormats.PlainText;
-                  break;
-                case var df:
-                  ps.Error($"Unsupported diagnostic format: '{df}'; expecting one of 'json', 'text'.");
-                  break;
-              }
-            }
-
-            return true;
-          }
-
-        case "spillTargetCode": {
-            uint spill = 0;
-            if (ps.GetUnsignedNumericArgument(ref spill, x => true)) {
-              SpillTargetCode = spill;
-            }
-
-            return true;
-          }
-
-        case "coverage": {
-            if (ps.ConfirmArgumentCount(1)) {
-              CoverageLegendFile = args[ps.i];
-            }
-
-            return true;
-          }
-
-        case "noCheating": {
-            int cheat = 0; // 0 is default, allows cheating
-            if (ps.GetIntArgument(ref cheat, 2)) {
-              DisallowSoundnessCheating = cheat == 1;
-            }
-
-            return true;
-          }
-
-        case "induction":
-          ps.GetIntArgument(ref Induction, 5);
-          return true;
-
-        case "inductionHeuristic":
-          ps.GetIntArgument(ref InductionHeuristic, 7);
-          return true;
-
-        case "noIncludes":
-          DisallowIncludes = true;
-          return true;
-
-        case "noExterns":
-          DisallowExterns = true;
-          return true;
-
-        case "noNLarith":
-          DisableNLarith = true;
-          return true;
-
-        case "arith": {
-            int a = 0;
-            if (ps.GetIntArgument(ref a, 11)) {
-              ArithMode = a;
-            }
-            return true;
-          }
-
-        case "autoReqPrint":
-          if (ps.ConfirmArgumentCount(1)) {
-            AutoReqPrintFile = args[ps.i];
-          }
-          return true;
-
-        case "noAutoReq":
-          ignoreAutoReq = true;
-          return true;
-
-        case "stats":
-          PrintStats = true;
-          return true;
-
-        case "funcCallGraph":
-          PrintFunctionCallGraph = true;
-          return true;
-
-        case "warnShadowing":
-          WarnShadowing = true;
-          return true;
-
-        case "verifyAllModules":
-          VerifyAllModules = true;
-          return true;
-
-        case "emitUncompilableCode":
-          this.Set(CommonOptionBag.EmitUncompilableCode, true);
-          return true;
-
-        case "separateModuleOutput":
-          SeparateModuleOutput = true;
-          return true;
-
-        case "deprecation": {
-            int d = 1;
-            if (ps.GetIntArgument(ref d, 3)) {
-              DeprecationNoise = d;
-            }
-
-            return true;
-          }
-
-        case "functionSyntax":
-          if (ps.ConfirmArgumentCount(1)) {
-            if (args[ps.i] == "3") {
-              FunctionSyntax = FunctionSyntaxOptions.Version3;
-            } else if (args[ps.i] == "4") {
-              FunctionSyntax = FunctionSyntaxOptions.Version4;
-            } else if (args[ps.i] == "migration3to4") {
-              FunctionSyntax = FunctionSyntaxOptions.Migration3To4;
-            } else if (args[ps.i] == "experimentalDefaultGhost") {
-              FunctionSyntax = FunctionSyntaxOptions.ExperimentalTreatUnspecifiedAsGhost;
-            } else if (args[ps.i] == "experimentalDefaultCompiled") {
-              FunctionSyntax = FunctionSyntaxOptions.ExperimentalTreatUnspecifiedAsCompiled;
-            } else if (args[ps.i] == "experimentalPredicateAlwaysGhost") {
-              FunctionSyntax = FunctionSyntaxOptions.ExperimentalPredicateAlwaysGhost;
-            } else {
-              InvalidArgumentError(name, ps);
-            }
-          }
-
-          return true;
-
-        case "quantifierSyntax":
-          if (ps.ConfirmArgumentCount(1)) {
-            if (args[ps.i] == "3") {
-              QuantifierSyntax = QuantifierSyntaxOptions.Version3;
-            } else if (args[ps.i] == "4") {
-              QuantifierSyntax = QuantifierSyntaxOptions.Version4;
-            } else {
-              InvalidArgumentError(name, ps);
-            }
-          }
-
-          return true;
-
-        case "printTooltips":
-          PrintTooltips = true;
-          return true;
-
-        case "warnMissingConstructorParentheses":
-          DisallowConstructorCaseWithoutParentheses = true;
-          return true;
-
-        case "autoTriggers": {
-            int autoTriggers = 0;
-            if (ps.GetIntArgument(ref autoTriggers, 2)) {
-              AutoTriggers = autoTriggers == 1;
-            }
-
-            return true;
-          }
-
-        case "rewriteFocalPredicates": {
-            int rewriteFocalPredicates = 0;
-            if (ps.GetIntArgument(ref rewriteFocalPredicates, 2)) {
-              RewriteFocalPredicates = rewriteFocalPredicates == 1;
-            }
-
-            return true;
-          }
-
-        case "optimize": {
-            Optimize = true;
-            return true;
-          }
-
-        case "optimizeResolution": {
-            int d = 2;
-            if (ps.GetIntArgument(ref d, 3)) {
-              OptimizeResolution = d;
-            }
-
-            return true;
-          }
-
-        case "definiteAssignment": {
-            int da = 0;
-            if (ps.GetIntArgument(ref da, 5)) {
-              DefiniteAssignmentLevel = da;
-            }
-
-            if (da == 3) {
-              ForbidNondeterminism = true;
-            }
-
-            return true;
-          }
-
-        case "useRuntimeLib": {
-            IncludeRuntime = false;
-            return true;
-          }
-
-        case "disableScopes": {
-            DisableScopes = true;
-            return true;
-          }
-
-        case "printIncludes":
-          if (ps.ConfirmArgumentCount(1)) {
-            if (args[ps.i].Equals("None")) {
-              PrintIncludesMode = IncludesModes.None;
-            } else if (args[ps.i].Equals("Immediate")) {
-              PrintIncludesMode = IncludesModes.Immediate;
-            } else if (args[ps.i].Equals("Transitive")) {
-              PrintIncludesMode = IncludesModes.Transitive;
-            } else {
-              InvalidArgumentError(name, ps);
-            }
-
-            if (PrintIncludesMode == IncludesModes.Immediate || PrintIncludesMode == IncludesModes.Transitive) {
-              Compile = false;
-              DafnyVerify = false;
-            }
-          }
-
-          return true;
-
-        case "stdin": {
-            UseStdin = true;
-            return true;
-          }
-
-        case "warningsAsErrors":
-          FailOnWarnings = true;
-          return true;
-
-        case "extractCounterexample":
-          ExtractCounterexample = true;
-          EnhancedErrorMessages = 1;
-          return true;
-
-        case "showProofObligationExpressions":
-          ShowProofObligationExpressions = true;
-          return true;
-
-        case "testContracts":
-          if (ps.ConfirmArgumentCount(1)) {
-            if (args[ps.i].Equals("Externs")) {
-              TestContracts = ContractTestingMode.Externs;
-            } else if (args[ps.i].Equals("TestedExterns")) {
-              TestContracts = ContractTestingMode.TestedExterns;
-            } else {
-              InvalidArgumentError(name, ps);
-            }
-          }
-          return true;
-      }
-
-      // Defer to superclass
-      return base.ParseOption(name, ps);
-    }
-
-    private static string[] ParseInnerArguments(string argumentsString) {
-      var splitter = new Regex(@"""(?<escapedArgument>(?:[^""\\]|\\\\|\\"")*)""|(?<rawArgument>[^ ]+)");
-      var escapedChars = new Regex(@"(?<escapedDoubleQuote>\\"")|\\\\");
-      return splitter.Matches(argumentsString).Select(
-        matchResult =>
-          matchResult.Groups["escapedArgument"].Success
-          ? escapedChars.Replace(matchResult.Groups["escapedArgument"].Value,
-            matchResult2 => matchResult2.Groups["escapedDoubleQuote"].Success ? "\"" : "\\")
-          : matchResult.Groups["rawArgument"].Value
-      ).ToArray();
-    }
-
-    public static void InvalidArgumentError(string name, Bpl.CommandLineParseState ps) {
-      ps.Error("Invalid argument \"{0}\" to option {1}", ps.args[ps.i], name);
-    }
-
-    public override void ApplyDefaultOptions() {
-      foreach (var legacyUiOption in LegacyUis) {
-        if (!Options.OptionArguments.ContainsKey(legacyUiOption.Option)) {
-          Options.OptionArguments[legacyUiOption.Option] = legacyUiOption.DefaultValue;
+        internal static bool ReplaceBinExprOp_6(long mutantId, string argument1, string argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            return argument1 == argument2;
         }
-        if (legacyBindings.ContainsKey(legacyUiOption.Option)) {
-          var value = Get(legacyUiOption.Option);
-          legacyBindings[legacyUiOption.Option](this, value);
+
+        internal static bool ReplaceBinExprOp_19(long mutantId, System.Version argument1, object argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            return argument1 != argument2;
         }
-      }
 
-      ApplyDefaultOptionsWithoutSettingsDefault();
+        internal static bool ReplaceBooleanConstant_2(long mutantId, bool argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return !argument1; }
+            return argument1;
+        }
+
+        internal static bool ReplaceBinExprOp_13(long mutantId, System.Func<bool> argument1, System.Func<bool> argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 5)) { return argument1() && argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1() || argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1() | argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1() & argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1() ^ argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1() == argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 5) { return argument1() != argument2(); }
+            return argument1() && argument2();
+        }
+
+        internal static bool ReplaceBinExprOp_21(long mutantId, System.Version argument1, System.Version argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 4)) { return argument1 < argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1 <= argument2; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1 > argument2; }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1 >= argument2; }
+            return argument1 < argument2;
+        }
+
+        internal static bool ReplaceBinExprOp_9(long mutantId, System.Func<bool> argument1, System.Func<bool> argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 5)) { return argument1() || argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1() && argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1() | argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1() & argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1() ^ argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1() == argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 5) { return argument1() != argument2(); }
+            return argument1() || argument2();
+        }
+
+        internal static bool ReplaceBinExprOp_17(long mutantId, System.Diagnostics.Process argument1, object argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 != argument2; }
+            return argument1 == argument2;
+        }
+
+        internal static uint ReplaceNumericConstant_14(long mutantId, uint argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 2)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 + 1; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 - 1; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return 0; }
+            return argument1;
+        }
+
+        internal static int ReplaceBinExprOp_8(long mutantId, int argument1, int argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 8)) { return argument1 + argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 - argument2; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 * argument2; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1 / argument2; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1 % argument2; }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1 << argument2; }
+            if (ActivatedMutantId.Value == mutantId + 5) { return argument1 >> argument2; }
+            if (ActivatedMutantId.Value == mutantId + 6) { return argument1 | argument2; }
+            if (ActivatedMutantId.Value == mutantId + 7) { return argument1 & argument2; }
+            if (ActivatedMutantId.Value == mutantId + 8) { return argument1 ^ argument2; }
+            return argument1 + argument2;
+        }
+
+        internal static bool ReplaceBinExprOp_20(long mutantId, System.Version argument1, System.Version argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 4)) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 < argument2; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1 <= argument2; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1 > argument2; }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1 >= argument2; }
+            return argument1 != argument2;
+        }
+
+        internal static bool ReplaceBinExprOp_10(long mutantId, int argument1, int argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 4)) { return argument1 <= argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1 < argument2; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1 > argument2; }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1 >= argument2; }
+            return argument1 <= argument2;
+        }
+
+        internal static int ReplacePrefixUnaryExprOp_12(long mutantId, ref int argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 3)) { return ++argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return +argument1; }
+            if (ActivatedMutantId.Value == mutantId + 1) { return -argument1; }
+            if (ActivatedMutantId.Value == mutantId + 2) { return ~argument1; }
+            if (ActivatedMutantId.Value == mutantId + 3) { return --argument1; }
+            return ++argument1;
+        }
+
+        internal static string ReplaceStringConstant_1(long mutantId, string argument1)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return string.Empty; }
+            return argument1;
+        }
+
+        internal static bool ReplaceBinExprOp_11(long mutantId, System.Func<bool> argument1, System.Func<bool> argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 5)) { return argument1() & argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1() || argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1() && argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1() | argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1() ^ argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1() == argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 5) { return argument1() != argument2(); }
+            return argument1() & argument2();
+        }
+
+        internal static bool ReplaceBinExprOp_18(long mutantId, string argument1, string argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 0)) { return argument1 != argument2; }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1 == argument2; }
+            return argument1 != argument2;
+        }
+
+    }
+}
+
+namespace Microsoft.Dafny
+{
+    public enum FunctionSyntaxOptions
+    {
+        Version3,
+        Migration3To4,
+        ExperimentalTreatUnspecifiedAsGhost,
+        ExperimentalTreatUnspecifiedAsCompiled,
+        ExperimentalPredicateAlwaysGhost,
+        Version4,
     }
 
-    public void ApplyDefaultOptionsWithoutSettingsDefault() {
-      base.ApplyDefaultOptions();
-
-      Backend ??= new CsharpBackend(this);
-      // Ask Boogie to perform abstract interpretation
-      UseAbstractInterpretation = true;
-      Ai.J_Intervals = true;
+    public enum QuantifierSyntaxOptions
+    {
+        Version3,
+        Version4,
     }
 
-    public bool IsUsingZ3() {
-      return !ProverOptions.Any(x => x.StartsWith("SOLVER=") && !x.EndsWith("=z3"));
-    }
+    public record Options(IDictionary<Option, object> OptionArguments, IDictionary<Argument, object> Arguments);
 
-    public void ProcessSolverOptions(ErrorReporter errorReporter, IToken token) {
-      if (IsUsingZ3()) {
-        var z3Version = SetZ3ExecutablePath(errorReporter, token);
-        SetZ3Options(z3Version);
-      }
-    }
+    public class DafnyOptions : Bpl.CommandLineOptions
+    {
 
-    public override string AttributeHelp =>
-      @"Dafny: The documentation about attributes is best viewed here:
+        public string GetPrintPath(string path) => UseBaseNameForFileName ? Path.GetFileName(path) : path;
+        public TextWriter ErrorWriter { get; set; }
+        public TextReader Input { get; }
+
+        public static readonly DafnyOptions Default = new(TextReader.Null, TextWriter.Null, TextWriter.Null);
+
+        public IList<Uri> CliRootSourceUris = new List<Uri>();
+
+        public DafnyProject DafnyProject { get; set; }
+
+        public static void ParseDefaultFunctionOpacity(Option<CommonOptionBag.DefaultFunctionOpacityOptions> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            if (ps.ConfirmArgumentCount(MutateCSharp.Schemata270.ReplaceNumericConstant_0(1L, 1)))
+            {
+                if (ps.args[ps.i].Equals(MutateCSharp.Schemata270.ReplaceStringConstant_1(5L, "transparent")))
+                {
+                    options.Set(option, CommonOptionBag.DefaultFunctionOpacityOptions.Transparent);
+                }
+                else if (ps.args[ps.i].Equals(MutateCSharp.Schemata270.ReplaceStringConstant_1(6L, "autoRevealDependencies")))
+                {
+                    options.Set(option, CommonOptionBag.DefaultFunctionOpacityOptions.AutoRevealDependencies);
+                }
+                else if (ps.args[ps.i].Equals(MutateCSharp.Schemata270.ReplaceStringConstant_1(7L, "opaque")))
+                {
+                    options.Set(option, CommonOptionBag.DefaultFunctionOpacityOptions.Opaque);
+                }
+                else
+                {
+                    InvalidArgumentError(option.Name, ps);
+                }
+            }
+        }
+
+        public void ApplyBinding(Option option)
+        {
+            if (legacyBindings.ContainsKey(option))
+            {
+                legacyBindings[option](this, Get(option));
+            }
+        }
+
+        public T Get<T>(Argument<T> argument)
+        {
+            return (T)Options.Arguments.GetOrCreate(argument, () => default(T));
+        }
+
+
+        public T Get<T>(Option<T> option)
+        {
+            return (T)Options.OptionArguments.GetOrCreate(option, () => default(T));
+        }
+
+        public object Get(Option option)
+        {
+            return Options.OptionArguments[option];
+        }
+
+        public void SetUntyped(Option option, object value)
+        {
+            Options.OptionArguments[option] = value;
+        }
+
+        public void Set<T>(Option<T> option, T value)
+        {
+            Options.OptionArguments[option] = value;
+        }
+
+        protected override void AddFile(string file, Bpl.CommandLineParseState ps)
+        {
+            CliRootSourceUris.Add(new Uri(Path.GetFullPath(file)));
+            base.AddFile(file, ps);
+        }
+
+        private static Dictionary<Option, Action<DafnyOptions, object>> legacyBindings = new();
+        public static void RegisterLegacyBinding<T>(Option<T> option, Action<DafnyOptions, T> bind)
+        {
+            legacyBindings[option] = (options, o) => bind(options, (T)o);
+        }
+
+        public static void ParseFileInfo(Option<FileInfo> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            if (ps.ConfirmArgumentCount(MutateCSharp.Schemata270.ReplaceNumericConstant_0(8L, 1)))
+            {
+                options.Set(option, new FileInfo(ps.args[ps.i]));
+            }
+        }
+
+        public static void ParseFileInfoElement(Option<IList<FileInfo>> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            var value = (IList<FileInfo>)options.Options.OptionArguments.GetOrCreate(option, () => new List<FileInfo>());
+            if (ps.ConfirmArgumentCount(MutateCSharp.Schemata270.ReplaceNumericConstant_0(12L, 1)))
+            {
+                value.Add(new FileInfo(ps.args[ps.i]));
+            }
+        }
+
+        public static void ParseString(Option<string> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            if (ps.ConfirmArgumentCount(MutateCSharp.Schemata270.ReplaceNumericConstant_0(16L, 1)))
+            {
+                options.Set(option, ps.args[ps.i]);
+            }
+        }
+
+        public static void ParseStringElement(Option<IList<string>> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            var value = (IList<string>)options.Options.OptionArguments.GetOrCreate(option, () => new List<string>());
+            if (ps.ConfirmArgumentCount(MutateCSharp.Schemata270.ReplaceNumericConstant_0(20L, 1)))
+            {
+                value.Add(ps.args[ps.i]);
+            }
+        }
+
+        public static void ParseImplicitEnable(Option<bool> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            options.Set(option, MutateCSharp.Schemata270.ReplaceBooleanConstant_2(24L, true));
+        }
+
+        public static void ParseBoolean(Option<bool> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            int result = MutateCSharp.Schemata270.ReplaceNumericConstant_0(25L, 0);
+            if (ps.GetIntArgument(ref result, MutateCSharp.Schemata270.ReplaceNumericConstant_0(29L, 2)))
+            {
+                options.Set(option, MutateCSharp.Schemata270.ReplaceBinExprOp_3(37L, result, MutateCSharp.Schemata270.ReplaceNumericConstant_0(33L, 1)));
+            }
+        }
+
+        public static void ParseGeneralTraitsOption(Option<CommonOptionBag.GeneralTraitsOptions> option, Bpl.CommandLineParseState ps, DafnyOptions options)
+        {
+            if (ps.ConfirmArgumentCount(MutateCSharp.Schemata270.ReplaceNumericConstant_0(42L, 1)))
+            {
+                switch (ps.args[ps.i])
+                {
+                    case "legacy":
+                        options.Set(option, CommonOptionBag.GeneralTraitsOptions.Legacy);
+                        break;
+                        break;
+                    case "datatype":
+                        options.Set(option, CommonOptionBag.GeneralTraitsOptions.Datatype);
+                        break;
+                        break;
+                    case "full":
+                        options.Set(option, CommonOptionBag.GeneralTraitsOptions.Full);
+                        break;
+                        break;
+                    default:
+                        InvalidArgumentError(option.Name, ps);
+                        break;
+                        break;
+                }
+            }
+        }
+
+        private static readonly List<LegacyUiForOption> LegacyUis = new();
+
+        public static void RegisterLegacyUi<T>(Option<T> option,
+          Action<Option<T>, Bpl.CommandLineParseState, DafnyOptions> parse,
+          string category, string legacyName = null, string legacyDescription = null, T defaultValue = default(T), string argumentName = null)
+        {
+            LegacyUis.Add(new LegacyUiForOption(
+              option,
+              (state, options) => parse(option, state, options),
+              category,
+              legacyName ?? option.Name,
+              legacyDescription ?? option.Description,
+              argumentName ?? option.ArgumentHelpName ?? MutateCSharp.Schemata270.ReplaceStringConstant_1(46L, "value"),
+              defaultValue));
+        }
+
+        private static DafnyOptions defaultImmutableOptions;
+        public static DafnyOptions DefaultImmutableOptions => defaultImmutableOptions ??= CreateUsingOldParser(Console.Out, Console.In);
+
+        public static DafnyOptions CreateUsingOldParser(TextWriter outputWriter, TextReader input = null, params string[] arguments)
+        {
+            input ??= TextReader.Null;
+            var result = new DafnyOptions(input, outputWriter, outputWriter);
+            result.Parse(arguments);
+            return result;
+        }
+
+        public override bool Parse(string[] arguments)
+        {
+            int i;
+            for (i = MutateCSharp.Schemata270.ReplaceNumericConstant_0(47L, 0); MutateCSharp.Schemata270.ReplaceBinExprOp_4(51L, i, arguments.Length); MutateCSharp.Schemata270.ReplacePostfixUnaryExprOp_5(56L, ref i))
+            {
+                if (MutateCSharp.Schemata270.ReplaceBinExprOp_6(58L, arguments[i], MutateCSharp.Schemata270.ReplaceStringConstant_1(57L, "--args")))
+                {
+                    break;
+                }
+            }
+
+            try
+            {
+                if (MutateCSharp.Schemata270.ReplaceBinExprOp_7(59L, i, arguments.Length))
+                {
+                    return BaseParse(arguments, MutateCSharp.Schemata270.ReplaceBooleanConstant_2(64L, true));
+                }
+                MainArgs = arguments.Skip(MutateCSharp.Schemata270.ReplaceBinExprOp_8(69L, i, MutateCSharp.Schemata270.ReplaceNumericConstant_0(65L, 1))).ToList();
+                return BaseParse(arguments.Take(i).ToArray(), MutateCSharp.Schemata270.ReplaceBooleanConstant_2(78L, true));
+            }
+            catch (Exception e)
+            {
+                ErrorWriter.WriteLine(MutateCSharp.Schemata270.ReplaceStringConstant_1(79L, "Invalid filename: ") + e.Message);
+                return MutateCSharp.Schemata270.ReplaceBooleanConstant_2(80L, false);
+            }
+
+            return default;
+        }
+
+        protected override Bpl.CommandLineParseState InitializeCommandLineParseState(string[] args)
+        {
+            return new TextWriterParseState(args, ToolName, ErrorWriter);
+        }
+
+        public
+            /// <summary>
+            /// Needed because the Boogie version writes to Console.Error
+            /// </summary>
+            class TextWriterParseState : Bpl.CommandLineParseState
+        {
+            private readonly TextWriter errorWriter;
+
+            public TextWriterParseState(string[] args, string toolName, TextWriter errorWriter) : base(args, toolName)
+            {
+                this.errorWriter = errorWriter;
+            }
+
+            public override void Error(string message, params string[] args)
+            {
+                errorWriter.WriteLine(MutateCSharp.Schemata270.ReplaceStringConstant_1(81L, "{0}: Error: {1}"), ToolName, string.Format(message, args));
+                EncounteredErrors = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(82L, true);
+            }
+        }
+
+        /// <summary>
+        /// Customized version of Microsoft.Boogie.CommandLineOptions.Parse
+        /// Needed because the Boogie version writes to Console.Error
+        /// </summary>
+        public bool BaseParse(string[] args, bool allowFile)
+        {
+            Environment = Environment + MutateCSharp.Schemata270.ReplaceStringConstant_1(83L, "Command Line Options: ") + string.Join(MutateCSharp.Schemata270.ReplaceStringConstant_1(84L, " "), args);
+            args = cce.NonNull<string[]>((string[])args.Clone());
+            Bpl.CommandLineParseState state;
+            for (state = InitializeCommandLineParseState(args); MutateCSharp.Schemata270.ReplaceBinExprOp_4(85L, state.i, args.Length); state.i = state.nextIndex)
+            {
+                cce.LoopInvariant(state.args == args);
+                string file = args[state.i];
+                state.s = file.Trim();
+                bool flag = MutateCSharp.Schemata270.ReplaceBinExprOp_9(92L, () => state.s.StartsWith(MutateCSharp.Schemata270.ReplaceStringConstant_1(90L, "-")), () => state.s.StartsWith(MutateCSharp.Schemata270.ReplaceStringConstant_1(91L, "/")));
+                int length = state.s.IndexOf(':');
+                if (MutateCSharp.Schemata270.ReplaceBinExprOp_11(107L, () => MutateCSharp.Schemata270.ReplaceBinExprOp_10(102L, MutateCSharp.Schemata270.ReplaceNumericConstant_0(98L, 0), length), () => flag))
+                {
+                    state.hasColonArgument = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(113L, true);
+                    args[state.i] = state.s.Substring(MutateCSharp.Schemata270.ReplaceBinExprOp_8(118L, length, MutateCSharp.Schemata270.ReplaceNumericConstant_0(114L, 1)));
+                    state.s = state.s.Substring(MutateCSharp.Schemata270.ReplaceNumericConstant_0(127L, 0), length);
+                }
+                else
+                {
+                    MutateCSharp.Schemata270.ReplacePrefixUnaryExprOp_12(131L, ref state.i);
+                    state.hasColonArgument = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(135L, false);
+                }
+                state.nextIndex = state.i;
+                if (flag)
+                {
+                    if (!ParseOption(state.s.Substring(MutateCSharp.Schemata270.ReplaceNumericConstant_0(136L, 1)), state))
+                    {
+                        if (MutateCSharp.Schemata270.ReplaceBinExprOp_13(146L, () => MutateCSharp.Schemata270.ReplaceBinExprOp_3(140L, Path.DirectorySeparatorChar, '/'), () => state.s.StartsWith(MutateCSharp.Schemata270.ReplaceStringConstant_1(145L, "/"))))
+                        {
+                            AddFile(file, state);
+                        }
+                        else
+                        {
+                            UnknownSwitch(state);
+                        }
+                    }
+                }
+                else if (allowFile)
+                {
+                    AddFile(file, state);
+                }
+                else
+                {
+                    state.Error($"Boogie option '{state.s}' must start with - or /");
+                }
+            }
+            if (state.EncounteredErrors)
+            {
+                ErrorWriter.WriteLine(MutateCSharp.Schemata270.ReplaceStringConstant_1(152L, "Use /help for available options"));
+                return MutateCSharp.Schemata270.ReplaceBooleanConstant_2(153L, false);
+            }
+            ApplyDefaultOptions();
+            return MutateCSharp.Schemata270.ReplaceBooleanConstant_2(154L, true);
+        }
+
+        public DafnyOptions(TextReader inputReader, TextWriter outputWriter, TextWriter errorWriter)
+          : base(outputWriter, MutateCSharp.Schemata270.ReplaceStringConstant_1(155L, "dafny"), MutateCSharp.Schemata270.ReplaceStringConstant_1(156L, "Dafny program verifier"), new Bpl.ConsolePrinter())
+        {
+            Input = inputReader;
+            ErrorWriter = errorWriter;
+            ErrorTrace = MutateCSharp.Schemata270.ReplaceNumericConstant_0(157L, 0);
+            Prune = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(161L, true);
+            TypeEncodingMethod = Bpl.CoreOptions.TypeEncoding.Arguments;
+            NormalizeNames = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(162L, true);
+            EmitDebugInformation = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(163L, false);
+            Backend = new CsharpBackend(this);
+            Printer = new NullPrinter();
+        }
+
+        public override string VersionNumber
+        {
+            get
+            {
+                return FileVersionInfo
+                  .GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion;
+            }
+        }
+
+        public Options Options { get; set; } = new(new Dictionary<Option, object>(), new Dictionary<Argument, object>());
+
+        public override string Version
+        {
+            get { return ToolName + VersionSuffix; }
+        }
+
+        public override string VersionSuffix
+        {
+            get { return MutateCSharp.Schemata270.ReplaceStringConstant_1(164L, " ") + VersionNumber; }
+        }
+
+        public bool RunLanguageServer { get; set; }
+
+        public enum DiagnosticsFormats
+        {
+            PlainText,
+            JSON,
+        }
+
+        public bool UsingNewCli = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(165L, false);
+        public bool UnicodeOutput = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(166L, false);
+        public DiagnosticsFormats DiagnosticsFormat = DiagnosticsFormats.PlainText;
+        public bool DisallowSoundnessCheating = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(167L, false);
+        public int Induction = MutateCSharp.Schemata270.ReplaceNumericConstant_0(168L, 4);
+        public int InductionHeuristic = MutateCSharp.Schemata270.ReplaceNumericConstant_0(172L, 6);
+        public string DafnyPrelude = null;
+        public string DafnyPrintFile = null;
+        public bool AllowSourceFolders = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(176L, false);
+        public List<string> SourceFolders { get; } = new(); // list of folders, for those commands that permit processing all source files in folders
+
+        public enum ContractTestingMode
+        {
+            None,
+            Externs,
+            TestedExterns,
+        }
+
+        public PrintModes PrintMode = PrintModes.Everything; // Default to printing everything
+        public bool DafnyVerify = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(177L, true);
+        public string DafnyPrintResolvedFile = null;
+        public List<string> DafnyPrintExportedViews = new List<string>();
+        public bool Compile = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(178L, true);
+        public List<string> MainArgs = new List<string>();
+        public bool FormatCheck = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(179L, false);
+
+        public string CompilerName;
+        public IExecutableBackend Backend;
+        public bool Verbose = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(180L, true);
+        public bool EnforcePrintEffects = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(181L, false);
+        public string DafnyPrintCompiledFile = null;
+        public string CoverageLegendFile = null;
+        public string MainMethod = null;
+        public bool ForceCompile = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(182L, false);
+        public bool RunAfterCompile = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(183L, false);
+        public uint SpillTargetCode = MutateCSharp.Schemata270.ReplaceNumericConstant_14(184L, 0); // [0..4]
+        public bool DisallowIncludes = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(187L, false);
+        public bool DisallowExterns = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(188L, false);
+        public bool AllowExterns => !DisallowExterns;
+        public bool DisableNLarith = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(189L, false);
+        public int ArithMode = MutateCSharp.Schemata270.ReplaceNumericConstant_0(190L, 1); // [0..10]
+        public string AutoReqPrintFile = null;
+        public bool ignoreAutoReq = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(194L, false);
+        public bool Optimize = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(195L, false);
+        public bool AutoTriggers = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(196L, true);
+        public bool RewriteFocalPredicates = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(197L, true);
+        public bool PrintTooltips = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(198L, false);
+        public bool PrintStats = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(199L, false);
+        public string MethodsToTest = null;
+        public bool DisallowConstructorCaseWithoutParentheses = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(200L, false);
+        public bool PrintFunctionCallGraph = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(201L, false);
+        public bool WarnShadowing = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(202L, false);
+        public FunctionSyntaxOptions FunctionSyntax = FunctionSyntaxOptions.Version4;
+        public QuantifierSyntaxOptions QuantifierSyntax = QuantifierSyntaxOptions.Version4;
+        public int DefiniteAssignmentLevel = MutateCSharp.Schemata270.ReplaceNumericConstant_0(203L, 1); // [0..5] 2 and 3 have the same effect, 4 turns off an array initialisation check and field initialization check, unless --enforce-determinism is used.
+        public HashSet<string> LibraryFiles { get; set; } = new();
+        public ContractTestingMode TestContracts = ContractTestingMode.None;
+
+        public bool ForbidNondeterminism { get; set; }
+
+        public int DeprecationNoise = MutateCSharp.Schemata270.ReplaceNumericConstant_0(207L, 1);
+        public bool VerifyAllModules = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(211L, false);
+        public bool SeparateModuleOutput = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(212L, false);
+
+        public enum IncludesModes
+        {
+            None,
+            Immediate,
+            Transitive
+        }
+
+        public IncludesModes PrintIncludesMode = IncludesModes.None;
+        public int OptimizeResolution = MutateCSharp.Schemata270.ReplaceNumericConstant_0(213L, 2);
+        public bool IncludeRuntime = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(217L, true);
+        public CommonOptionBag.SystemModuleMode SystemModuleTranslationMode = CommonOptionBag.SystemModuleMode.Omit;
+        public bool UseJavadocLikeDocstringRewriter = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(218L, false);
+        public bool DisableScopes = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(219L, false);
+        public bool UseStdin = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(220L, false);
+        public bool FailOnWarnings = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(221L, false);
+        [CanBeNull] private TestGenerationOptions testGenOptions = null;
+        public bool ExtractCounterexample = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(222L, false);
+
+        public bool ShowProofObligationExpressions = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(223L, false);
+
+        public bool AuditProgram = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(224L, false);
+
+        public static string DefaultZ3Version = MutateCSharp.Schemata270.ReplaceStringConstant_1(225L, "4.12.1");
+        // Not directly user-configurable, only recorded once we discover it
+        public string SolverIdentifier { get; private set; }
+        public Version SolverVersion { get; set; }
+
+        public static readonly ReadOnlyCollection<Plugin> DefaultPlugins =
+          new(new[] { SinglePassCodeGenerator.Plugin, InternalDocstringRewritersPluginConfiguration.Plugin });
+        private IList<Plugin> cliPluginCache;
+        public IList<Plugin> Plugins => cliPluginCache ??= ComputePlugins(AdditionalPlugins, AdditionalPluginArguments);
+        public List<Plugin> AdditionalPlugins = new();
+        public IList<string> AdditionalPluginArguments = new List<string>();
+
+        public static IList<Plugin> ComputePlugins(List<Plugin> additionalPlugins, IList<string> allArguments)
+        {
+            var result = new List<Plugin>(DefaultPlugins.Concat(additionalPlugins));
+            foreach (var pluginAndArgument in allArguments)
+            {
+                try
+                {
+                    var pluginArray = pluginAndArgument.Split(',');
+                    var pluginPath = pluginArray[MutateCSharp.Schemata270.ReplaceNumericConstant_0(226L, 0)];
+                    var arguments = Array.Empty<string>();
+                    if (MutateCSharp.Schemata270.ReplaceBinExprOp_7(234L, pluginArray.Length, MutateCSharp.Schemata270.ReplaceNumericConstant_0(230L, 2)))
+                    {
+                        // There are no commas in paths, but there can be in arguments
+                        var argumentsString = string.Join(',', pluginArray.Skip(MutateCSharp.Schemata270.ReplaceNumericConstant_0(239L, 1)));
+                        // Parse arguments, accepting and remove double quotes that isolate long arguments
+                        arguments = ParsePluginArguments(argumentsString);
+                    }
+
+                    result.Add(AssemblyPlugin.Load(pluginPath, arguments));
+                }
+                catch (Exception e)
+                {
+                    result.Add(new ErrorPlugin(pluginAndArgument, e));
+                }
+            }
+
+            return result;
+        }
+
+        private static string[] ParsePluginArguments(string argumentsString)
+        {
+            var splitter = new Regex(MutateCSharp.Schemata270.ReplaceStringConstant_1(243L, @"""(?<escapedArgument>(?:[^""\\]|\\\\|\\"")*)""|(?<rawArgument>[^ ]+)"));
+            var escapedChars = new Regex(MutateCSharp.Schemata270.ReplaceStringConstant_1(244L, @"(?<escapedDoubleQuote>\\"")|\\\\"));
+            return splitter.Matches(argumentsString).Select(
+              matchResult =>
+                matchResult.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(245L, "escapedArgument")].Success
+                  ? escapedChars.Replace(matchResult.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(246L, "escapedArgument")].Value,
+                    matchResult2 => matchResult2.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(247L, "escapedDoubleQuote")].Success ? MutateCSharp.Schemata270.ReplaceStringConstant_1(248L, "\"") : MutateCSharp.Schemata270.ReplaceStringConstant_1(249L, "\\"))
+                  : matchResult.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(250L, "rawArgument")].Value
+            ).ToArray();
+        }
+
+        public static bool TryParseResourceCount(string value, out uint result)
+        {
+            return uint.TryParse(value, NumberStyles.AllowExponent, null, out result);
+        }
+
+        /// <summary>
+        /// Automatic shallow-copy constructor
+        /// </summary>
+        public DafnyOptions(DafnyOptions src, bool useNullWriters = false) : this(
+          src.Input, src.OutputWriter, src.ErrorWriter)
+        {
+            src.CopyTo(this, useNullWriters);
+            CliRootSourceUris = new List<Uri>(src.CliRootSourceUris);
+            ProverOptions = new List<string>(src.ProverOptions);
+            Options = new Options(
+              src.Options.OptionArguments.ToDictionary(kv => kv.Key, kv => kv.Value),
+              src.Options.Arguments.ToDictionary(kv => kv.Key, kv => kv.Value));
+        }
+
+        private void CopyTo(DafnyOptions dst, bool useNullWriters)
+        {
+            var type = typeof(DafnyOptions);
+            while (MutateCSharp.Schemata270.ReplaceBinExprOp_15(251L, type, null))
+            {
+                var fields = type.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                foreach (var fi in fields)
+                {
+                    var value = fi.GetValue(this);
+                    // This hacky code is necessary until we switch to a Boogie version that implements https://github.com/boogie-org/boogie/pull/788
+                    if (MutateCSharp.Schemata270.ReplaceBinExprOp_13(252L, () => useNullWriters, () => fi.Name is "<ErrorWriter>k__BackingField" or "<OutputWriter>k__BackingField"))
+                    {
+                        value = TextWriter.Null;
+                    }
+                    fi.SetValue(dst, value);
+                }
+                type = type.BaseType;
+            }
+        }
+
+        public virtual TestGenerationOptions TestGenOptions =>
+          testGenOptions ??= new TestGenerationOptions();
+
+        protected override bool ParseOption(string name, Bpl.CommandLineParseState ps)
+        {
+            if (ParseDafnySpecificOption(name, ps))
+            {
+                return MutateCSharp.Schemata270.ReplaceBooleanConstant_2(258L, true);
+            }
+
+            foreach (var option in LegacyUis.Where(o => MutateCSharp.Schemata270.ReplaceBinExprOp_6(259L, o.Name, name)))
+            {
+                option.Parse(ps, this);
+                return MutateCSharp.Schemata270.ReplaceBooleanConstant_2(260L, true);
+            }
+
+            return ParseBoogieOption(name, ps);
+        }
+
+        private bool ParseBoogieOption(string name, Bpl.CommandLineParseState ps)
+        {
+            return base.ParseOption(name, ps);
+        }
+
+        public override string Help => MutateCSharp.Schemata270.ReplaceStringConstant_1(261L, "Use 'dafny --help' to see help for the new Dafny CLI format.\n") +
+          LegacyUiForOption.GenerateHelp(base.Help, LegacyUis, MutateCSharp.Schemata270.ReplaceBooleanConstant_2(262L, true));
+
+        protected bool ParseDafnySpecificOption(string name, Bpl.CommandLineParseState ps)
+        {
+            var args = ps.args; // convenient synonym
+            switch (name)
+            {
+
+                case "view":
+                    if (ps.ConfirmArgumentCount(1))
+                    {
+                        DafnyPrintExportedViews = args[ps.i].Split(',').ToList();
+                    }
+
+                    return true;
+                    break;
+                case "compile":
+                    {
+                        int compile = 0;
+                        if (ps.GetIntArgument(ref compile, 5))
+                        {
+                            // convert option to two booleans
+                            Compile = compile != 0;
+                            ForceCompile = compile == 2 || compile == 4;
+                            RunAfterCompile = compile == 3 || compile == 4;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "compileVerbose":
+                    {
+                        int verbosity = 0;
+                        if (ps.GetIntArgument(ref verbosity, 2))
+                        {
+                            Verbose = verbosity == 1;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "trackPrintEffects":
+                    {
+                        int printEffects = 0;
+                        if (ps.GetIntArgument(ref printEffects, 2))
+                        {
+                            EnforcePrintEffects = printEffects == 1;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "Main":
+                case "main":
+                    {
+                        if (ps.ConfirmArgumentCount(1))
+                        {
+                            MainMethod = args[ps.i];
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "check":
+                    {
+                        if (!ps.hasColonArgument || ps.ConfirmArgumentCount(1))
+                        {
+                            FormatCheck = !ps.hasColonArgument || args[ps.i] == "1";
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "dafnyVerify":
+                    {
+                        int verify = 0;
+                        if (ps.GetIntArgument(ref verify, 2))
+                        {
+                            DafnyVerify = verify != 0; // convert to boolean
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "diagnosticsFormat":
+                    {
+                        if (ps.ConfirmArgumentCount(1))
+                        {
+                            switch (args[ps.i])
+                            {
+                                case "json":
+                                    Printer = new DafnyJsonConsolePrinter(this);
+                                    DiagnosticsFormat = DiagnosticsFormats.JSON;
+                                    break;
+                                case "text":
+                                    Printer = new DafnyConsolePrinter(this);
+                                    DiagnosticsFormat = DiagnosticsFormats.PlainText;
+                                    break;
+                                case var df:
+                                    ps.Error($"Unsupported diagnostic format: '{df}'; expecting one of 'json', 'text'.");
+                                    break;
+                            }
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "spillTargetCode":
+                    {
+                        uint spill = 0;
+                        if (ps.GetUnsignedNumericArgument(ref spill, x => true))
+                        {
+                            SpillTargetCode = spill;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "coverage":
+                    {
+                        if (ps.ConfirmArgumentCount(1))
+                        {
+                            CoverageLegendFile = args[ps.i];
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "noCheating":
+                    {
+                        int cheat = 0; // 0 is default, allows cheating
+                        if (ps.GetIntArgument(ref cheat, 2))
+                        {
+                            DisallowSoundnessCheating = cheat == 1;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "induction":
+                    ps.GetIntArgument(ref Induction, 5);
+                    return true;
+                    break;
+                case "inductionHeuristic":
+                    ps.GetIntArgument(ref InductionHeuristic, 7);
+                    return true;
+                    break;
+                case "noIncludes":
+                    DisallowIncludes = true;
+                    return true;
+                    break;
+                case "noExterns":
+                    DisallowExterns = true;
+                    return true;
+                    break;
+                case "noNLarith":
+                    DisableNLarith = true;
+                    return true;
+                    break;
+                case "arith":
+                    {
+                        int a = 0;
+                        if (ps.GetIntArgument(ref a, 11))
+                        {
+                            ArithMode = a;
+                        }
+                        return true;
+                    }
+
+                    break;
+                case "autoReqPrint":
+                    if (ps.ConfirmArgumentCount(1))
+                    {
+                        AutoReqPrintFile = args[ps.i];
+                    }
+                    return true;
+                    break;
+                case "noAutoReq":
+                    ignoreAutoReq = true;
+                    return true;
+                    break;
+                case "stats":
+                    PrintStats = true;
+                    return true;
+                    break;
+                case "funcCallGraph":
+                    PrintFunctionCallGraph = true;
+                    return true;
+                    break;
+                case "warnShadowing":
+                    WarnShadowing = true;
+                    return true;
+                    break;
+                case "verifyAllModules":
+                    VerifyAllModules = true;
+                    return true;
+                    break;
+                case "emitUncompilableCode":
+                    this.Set(CommonOptionBag.EmitUncompilableCode, true);
+                    return true;
+                    break;
+                case "separateModuleOutput":
+                    SeparateModuleOutput = true;
+                    return true;
+                    break;
+                case "deprecation":
+                    {
+                        int d = 1;
+                        if (ps.GetIntArgument(ref d, 3))
+                        {
+                            DeprecationNoise = d;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "functionSyntax":
+                    if (ps.ConfirmArgumentCount(1))
+                    {
+                        if (args[ps.i] == "3")
+                        {
+                            FunctionSyntax = FunctionSyntaxOptions.Version3;
+                        }
+                        else if (args[ps.i] == "4")
+                        {
+                            FunctionSyntax = FunctionSyntaxOptions.Version4;
+                        }
+                        else if (args[ps.i] == "migration3to4")
+                        {
+                            FunctionSyntax = FunctionSyntaxOptions.Migration3To4;
+                        }
+                        else if (args[ps.i] == "experimentalDefaultGhost")
+                        {
+                            FunctionSyntax = FunctionSyntaxOptions.ExperimentalTreatUnspecifiedAsGhost;
+                        }
+                        else if (args[ps.i] == "experimentalDefaultCompiled")
+                        {
+                            FunctionSyntax = FunctionSyntaxOptions.ExperimentalTreatUnspecifiedAsCompiled;
+                        }
+                        else if (args[ps.i] == "experimentalPredicateAlwaysGhost")
+                        {
+                            FunctionSyntax = FunctionSyntaxOptions.ExperimentalPredicateAlwaysGhost;
+                        }
+                        else
+                        {
+                            InvalidArgumentError(name, ps);
+                        }
+                    }
+
+                    return true;
+                    break;
+                case "quantifierSyntax":
+                    if (ps.ConfirmArgumentCount(1))
+                    {
+                        if (args[ps.i] == "3")
+                        {
+                            QuantifierSyntax = QuantifierSyntaxOptions.Version3;
+                        }
+                        else if (args[ps.i] == "4")
+                        {
+                            QuantifierSyntax = QuantifierSyntaxOptions.Version4;
+                        }
+                        else
+                        {
+                            InvalidArgumentError(name, ps);
+                        }
+                    }
+
+                    return true;
+                    break;
+                case "printTooltips":
+                    PrintTooltips = true;
+                    return true;
+                    break;
+                case "warnMissingConstructorParentheses":
+                    DisallowConstructorCaseWithoutParentheses = true;
+                    return true;
+                    break;
+                case "autoTriggers":
+                    {
+                        int autoTriggers = 0;
+                        if (ps.GetIntArgument(ref autoTriggers, 2))
+                        {
+                            AutoTriggers = autoTriggers == 1;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "rewriteFocalPredicates":
+                    {
+                        int rewriteFocalPredicates = 0;
+                        if (ps.GetIntArgument(ref rewriteFocalPredicates, 2))
+                        {
+                            RewriteFocalPredicates = rewriteFocalPredicates == 1;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "optimize":
+                    {
+                        Optimize = true;
+                        return true;
+                    }
+
+                    break;
+                case "optimizeResolution":
+                    {
+                        int d = 2;
+                        if (ps.GetIntArgument(ref d, 3))
+                        {
+                            OptimizeResolution = d;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "definiteAssignment":
+                    {
+                        int da = 0;
+                        if (ps.GetIntArgument(ref da, 5))
+                        {
+                            DefiniteAssignmentLevel = da;
+                        }
+
+                        if (da == 3)
+                        {
+                            ForbidNondeterminism = true;
+                        }
+
+                        return true;
+                    }
+
+                    break;
+                case "useRuntimeLib":
+                    {
+                        IncludeRuntime = false;
+                        return true;
+                    }
+
+                    break;
+                case "disableScopes":
+                    {
+                        DisableScopes = true;
+                        return true;
+                    }
+
+                    break;
+                case "printIncludes":
+                    if (ps.ConfirmArgumentCount(1))
+                    {
+                        if (args[ps.i].Equals("None"))
+                        {
+                            PrintIncludesMode = IncludesModes.None;
+                        }
+                        else if (args[ps.i].Equals("Immediate"))
+                        {
+                            PrintIncludesMode = IncludesModes.Immediate;
+                        }
+                        else if (args[ps.i].Equals("Transitive"))
+                        {
+                            PrintIncludesMode = IncludesModes.Transitive;
+                        }
+                        else
+                        {
+                            InvalidArgumentError(name, ps);
+                        }
+
+                        if (PrintIncludesMode == IncludesModes.Immediate || PrintIncludesMode == IncludesModes.Transitive)
+                        {
+                            Compile = false;
+                            DafnyVerify = false;
+                        }
+                    }
+
+                    return true;
+                    break;
+                case "stdin":
+                    {
+                        UseStdin = true;
+                        return true;
+                    }
+
+                    break;
+                case "warningsAsErrors":
+                    FailOnWarnings = true;
+                    return true;
+                    break;
+                case "extractCounterexample":
+                    ExtractCounterexample = true;
+                    EnhancedErrorMessages = 1;
+                    return true;
+                    break;
+                case "showProofObligationExpressions":
+                    ShowProofObligationExpressions = true;
+                    return true;
+                    break;
+                case "testContracts":
+                    if (ps.ConfirmArgumentCount(1))
+                    {
+                        if (args[ps.i].Equals("Externs"))
+                        {
+                            TestContracts = ContractTestingMode.Externs;
+                        }
+                        else if (args[ps.i].Equals("TestedExterns"))
+                        {
+                            TestContracts = ContractTestingMode.TestedExterns;
+                        }
+                        else
+                        {
+                            InvalidArgumentError(name, ps);
+                        }
+                    }
+                    return true;
+                    break;
+            }
+
+            // Defer to superclass
+            return base.ParseOption(name, ps);
+        }
+
+        private static string[] ParseInnerArguments(string argumentsString)
+        {
+            var splitter = new Regex(MutateCSharp.Schemata270.ReplaceStringConstant_1(263L, @"""(?<escapedArgument>(?:[^""\\]|\\\\|\\"")*)""|(?<rawArgument>[^ ]+)"));
+            var escapedChars = new Regex(MutateCSharp.Schemata270.ReplaceStringConstant_1(264L, @"(?<escapedDoubleQuote>\\"")|\\\\"));
+            return splitter.Matches(argumentsString).Select(
+              matchResult =>
+                matchResult.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(265L, "escapedArgument")].Success
+                ? escapedChars.Replace(matchResult.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(266L, "escapedArgument")].Value,
+                  matchResult2 => matchResult2.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(267L, "escapedDoubleQuote")].Success ? MutateCSharp.Schemata270.ReplaceStringConstant_1(268L, "\"") : MutateCSharp.Schemata270.ReplaceStringConstant_1(269L, "\\"))
+                : matchResult.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(270L, "rawArgument")].Value
+            ).ToArray();
+        }
+
+        public static void InvalidArgumentError(string name, Bpl.CommandLineParseState ps)
+        {
+            ps.Error(MutateCSharp.Schemata270.ReplaceStringConstant_1(271L, "Invalid argument \"{0}\" to option {1}"), ps.args[ps.i], name);
+        }
+
+        public override void ApplyDefaultOptions()
+        {
+            foreach (var legacyUiOption in LegacyUis)
+            {
+                if (!Options.OptionArguments.ContainsKey(legacyUiOption.Option))
+                {
+                    Options.OptionArguments[legacyUiOption.Option] = legacyUiOption.DefaultValue;
+                }
+                if (legacyBindings.ContainsKey(legacyUiOption.Option))
+                {
+                    var value = Get(legacyUiOption.Option);
+                    legacyBindings[legacyUiOption.Option](this, value);
+                }
+            }
+
+            ApplyDefaultOptionsWithoutSettingsDefault();
+        }
+
+        public void ApplyDefaultOptionsWithoutSettingsDefault()
+        {
+            base.ApplyDefaultOptions();
+
+            Backend ??= new CsharpBackend(this);
+            // Ask Boogie to perform abstract interpretation
+            UseAbstractInterpretation = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(272L, true);
+            Ai.J_Intervals = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(273L, true);
+        }
+
+        public bool IsUsingZ3()
+        {
+            return !ProverOptions.Any(x => MutateCSharp.Schemata270.ReplaceBinExprOp_13(276L, () => x.StartsWith(MutateCSharp.Schemata270.ReplaceStringConstant_1(274L, "SOLVER=")), () => !x.EndsWith(MutateCSharp.Schemata270.ReplaceStringConstant_1(275L, "=z3"))));
+        }
+
+        public void ProcessSolverOptions(ErrorReporter errorReporter, IToken token)
+        {
+            if (IsUsingZ3())
+            {
+                var z3Version = SetZ3ExecutablePath(errorReporter, token);
+                SetZ3Options(z3Version);
+            }
+        }
+
+        public override string AttributeHelp => MutateCSharp.Schemata270.ReplaceStringConstant_1(282L, @"Dafny: The documentation about attributes is best viewed here:
       https://dafny-lang.github.io/dafny/DafnyRef/DafnyRef#sec-attributes
       
      The following attributes are supported by this version.
@@ -1098,150 +1528,170 @@ namespace Microsoft.Dafny {
       TODO
 
     {:trigger}
-      TODO".Replace("%SUPPORTED_OPTIONS%",
-        string.Join(", ", DafnyAttributeOptions.KnownOptions));
+      TODO").Replace(MutateCSharp.Schemata270.ReplaceStringConstant_1(283L, "%SUPPORTED_OPTIONS%"),
+            string.Join(MutateCSharp.Schemata270.ReplaceStringConstant_1(284L, ", "), DafnyAttributeOptions.KnownOptions));
 
-    private static ConcurrentDictionary<string, Version> z3VersionPerPath = new();
-    /// <summary>
-    /// Dafny releases come with their own copy of Z3, to save users the trouble of having to install extra dependencies.
-    /// For this to work, Dafny first tries any prover path explicitly provided by the user, then looks for for the copy
-    /// distributed with Dafny, and finally looks in any directory in the system PATH environment variable.
-    /// </summary>
-    private Version SetZ3ExecutablePath(ErrorReporter errorReporter, IToken token) {
-      string confirmedProverPath = null;
-      string nextStepsMessage = $"Please either provide a path to the `z3` executable using the `--solver-path <path>` option, manually place the `z3` directory next to the `dafny` executable you are using (this directory should contain `bin/z3-{DefaultZ3Version}` or `bin/z3-{DefaultZ3Version}.exe`), or set the PATH environment variable to also include a directory containing the `z3` executable.";
+        private static ConcurrentDictionary<string, Version> z3VersionPerPath = new();
+        /// <summary>
+        /// Dafny releases come with their own copy of Z3, to save users the trouble of having to install extra dependencies.
+        /// For this to work, Dafny first tries any prover path explicitly provided by the user, then looks for for the copy
+        /// distributed with Dafny, and finally looks in any directory in the system PATH environment variable.
+        /// </summary>
+        private Version SetZ3ExecutablePath(ErrorReporter errorReporter, IToken token)
+        {
+            string confirmedProverPath = null;
+            string nextStepsMessage = $"Please either provide a path to the `z3` executable using the `--solver-path <path>` option, manually place the `z3` directory next to the `dafny` executable you are using (this directory should contain `bin/z3-{DefaultZ3Version}` or `bin/z3-{DefaultZ3Version}.exe`), or set the PATH environment variable to also include a directory containing the `z3` executable.";
 
-      // Try an explicitly provided prover path, if there is one.
-      var pp = "PROVER_PATH=";
-      var proverPathOption = ProverOptions.Find(o => o.StartsWith(pp));
-      if (proverPathOption != null) {
-        var proverPath = proverPathOption.Substring(pp.Length);
-        // Boogie will perform the ultimate test to see if "proverPath" is real--it will attempt to run it.
-        // However, by at least checking if the file exists, we can produce a better error message in common scenarios.
-        // Unfortunately, there doesn't seem to be a portable way of checking whether it's executable.
-        if (!File.Exists(proverPath)) {
-          errorReporter.Error(MessageSource.Verifier, token, $"Z3 not found at {proverPath}. " + nextStepsMessage);
-          return null;
+            // Try an explicitly provided prover path, if there is one.
+            var pp = MutateCSharp.Schemata270.ReplaceStringConstant_1(285L, "PROVER_PATH=");
+            var proverPathOption = ProverOptions.Find(o => o.StartsWith(pp));
+            if (proverPathOption != null)
+            {
+                var proverPath = proverPathOption.Substring(pp.Length);
+                // Boogie will perform the ultimate test to see if "proverPath" is real--it will attempt to run it.
+                // However, by at least checking if the file exists, we can produce a better error message in common scenarios.
+                // Unfortunately, there doesn't seem to be a portable way of checking whether it's executable.
+                if (!File.Exists(proverPath))
+                {
+                    errorReporter.Error(MessageSource.Verifier, token, $"Z3 not found at {proverPath}. " + nextStepsMessage);
+                    return null;
+                }
+
+                confirmedProverPath = proverPath;
+            }
+
+            var platform = System.Environment.OSVersion.Platform;
+            var isUnix = MutateCSharp.Schemata270.ReplaceBinExprOp_9(288L, () => MutateCSharp.Schemata270.ReplaceBinExprOp_16(286L, platform, PlatformID.Unix), () => MutateCSharp.Schemata270.ReplaceBinExprOp_16(287L, platform, PlatformID.MacOSX));
+
+            // Next, try looking in a directory relative to Dafny itself.
+            if (confirmedProverPath is null)
+            {
+                var dafnyBinDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                var z3LocalBinName = isUnix
+                  ? $"z3-{DefaultZ3Version}"
+                  : $"z3-{DefaultZ3Version}.exe";
+                var z3BinPath = Path.Combine(dafnyBinDir, MutateCSharp.Schemata270.ReplaceStringConstant_1(294L, "z3"), MutateCSharp.Schemata270.ReplaceStringConstant_1(295L, "bin"), z3LocalBinName);
+
+                if (File.Exists(z3BinPath))
+                {
+                    confirmedProverPath = z3BinPath;
+                }
+            }
+
+            // Finally, try looking in the system PATH variable.
+            var z3GlobalBinName = isUnix ? MutateCSharp.Schemata270.ReplaceStringConstant_1(296L, "z3") : MutateCSharp.Schemata270.ReplaceStringConstant_1(297L, "z3.exe");
+            if (confirmedProverPath is null)
+            {
+                confirmedProverPath = System.Environment
+                  .GetEnvironmentVariable(MutateCSharp.Schemata270.ReplaceStringConstant_1(298L, "PATH"))?
+                  .Split(isUnix ? ':' : ';')
+                  .Select(s => Path.Combine(s, z3GlobalBinName))
+                  .FirstOrDefault(File.Exists);
+            }
+
+            if (confirmedProverPath is not null)
+            {
+                ProverOptions.Add($"{pp}{confirmedProverPath}");
+                return z3VersionPerPath.GetOrAdd(confirmedProverPath, GetZ3Version);
+            }
+
+            errorReporter.Error(MessageSource.Verifier, DafnyProject.StartingToken, MutateCSharp.Schemata270.ReplaceStringConstant_1(299L, "Z3 is not found. ") + nextStepsMessage);
+            return null;
         }
 
-        confirmedProverPath = proverPath;
-      }
+        private static readonly Regex Z3VersionRegex = new Regex(MutateCSharp.Schemata270.ReplaceStringConstant_1(300L, @"Z3 version (?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)"));
 
-      var platform = System.Environment.OSVersion.Platform;
-      var isUnix = platform == PlatformID.Unix || platform == PlatformID.MacOSX;
+        [CanBeNull]
+        public static Version GetZ3Version(string proverPath)
+        {
+            var z3Process = new ProcessStartInfo(proverPath, MutateCSharp.Schemata270.ReplaceStringConstant_1(301L, "-version"))
+            {
+                CreateNoWindow = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(302L, true),
+                RedirectStandardError = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(303L, true),
+                RedirectStandardOutput = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(304L, true),
+                RedirectStandardInput = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(305L, true
+      )
+            };
+            var run = Process.Start(z3Process);
+            if (MutateCSharp.Schemata270.ReplaceBinExprOp_17(306L, run, null))
+            {
+                return null;
+            }
 
-      // Next, try looking in a directory relative to Dafny itself.
-      if (confirmedProverPath is null) {
-        var dafnyBinDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        var z3LocalBinName = isUnix
-          ? $"z3-{DefaultZ3Version}"
-          : $"z3-{DefaultZ3Version}.exe";
-        var z3BinPath = Path.Combine(dafnyBinDir, "z3", "bin", z3LocalBinName);
+            var actualOutput = run.StandardOutput.ReadToEnd();
+            run.WaitForExit();
+            var versionMatch = Z3VersionRegex.Match(actualOutput);
+            if (!versionMatch.Success)
+            {
+                // Might be another solver.
+                return null;
+            }
 
-        if (File.Exists(z3BinPath)) {
-          confirmedProverPath = z3BinPath;
+            var major = int.Parse(versionMatch.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(307L, "major")].Value);
+            var minor = int.Parse(versionMatch.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(308L, "minor")].Value);
+            var patch = int.Parse(versionMatch.Groups[MutateCSharp.Schemata270.ReplaceStringConstant_1(309L, "patch")].Value);
+            return new Version(major, minor, patch);
         }
-      }
 
-      // Finally, try looking in the system PATH variable.
-      var z3GlobalBinName = isUnix ? "z3" : "z3.exe";
-      if (confirmedProverPath is null) {
-        confirmedProverPath = System.Environment
-          .GetEnvironmentVariable("PATH")?
-          .Split(isUnix ? ':' : ';')
-          .Select(s => Path.Combine(s, z3GlobalBinName))
-          .FirstOrDefault(File.Exists);
-      }
+        // Set a Z3 option, but only if it is not overwriting an existing option.
+        private void SetZ3Option(string name, string value)
+        {
+            if (!ProverOptions.Any(o => o.StartsWith($"O:{name}=")))
+            {
+                ProverOptions.Add($"O:{name}={value}");
+            }
+        }
 
-      if (confirmedProverPath is not null) {
-        ProverOptions.Add($"{pp}{confirmedProverPath}");
-        return z3VersionPerPath.GetOrAdd(confirmedProverPath, GetZ3Version);
-      }
+        public void SetZ3Options(Version z3Version)
+        {
+            // Don't allow changing this once set, just in case:
+            // a DooFile will record this and will get confused if it changes.
+            if (MutateCSharp.Schemata270.ReplaceBinExprOp_9(330L, () => (MutateCSharp.Schemata270.ReplaceBinExprOp_13(312L, () => SolverIdentifier != null, () => MutateCSharp.Schemata270.ReplaceBinExprOp_18(311L, SolverIdentifier, MutateCSharp.Schemata270.ReplaceStringConstant_1(310L, "Z3"))))
+      , () => (MutateCSharp.Schemata270.ReplaceBinExprOp_13(324L, () => MutateCSharp.Schemata270.ReplaceBinExprOp_19(318L, SolverVersion, null), () => MutateCSharp.Schemata270.ReplaceBinExprOp_20(319L, SolverVersion, z3Version)))))
+            {
+                throw new Exception(MutateCSharp.Schemata270.ReplaceStringConstant_1(336L, "Attempted to set Z3 options more than once"));
+            }
+            SolverIdentifier = MutateCSharp.Schemata270.ReplaceStringConstant_1(337L, "Z3");
+            SolverVersion = z3Version;
 
-      errorReporter.Error(MessageSource.Verifier, DafnyProject.StartingToken, "Z3 is not found. " + nextStepsMessage);
-      return null;
-    }
+            // Boogie sets the following Z3 options by default:
+            // smt.mbqi = false
+            // model.compact = false
+            // model.v2 = true
+            // pp.bv_literals = false
 
-    private static readonly Regex Z3VersionRegex = new Regex(@"Z3 version (?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)");
+            // Boogie also used to set the following options, but does not anymore.
+            SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(338L, "auto_config"), MutateCSharp.Schemata270.ReplaceStringConstant_1(339L, "false"));
+            SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(340L, "type_check"), MutateCSharp.Schemata270.ReplaceStringConstant_1(341L, "true"));
+            SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(342L, "smt.qi.eager_threshold"), MutateCSharp.Schemata270.ReplaceStringConstant_1(343L, "100")); // TODO: try lowering
+            SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(344L, "smt.delay_units"), MutateCSharp.Schemata270.ReplaceStringConstant_1(345L, "true"));
+            SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(346L, "model_evaluator.completion"), MutateCSharp.Schemata270.ReplaceStringConstant_1(347L, "true"));
+            SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(348L, "model.completion"), MutateCSharp.Schemata270.ReplaceStringConstant_1(349L, "true"));
+            if (MutateCSharp.Schemata270.ReplaceBinExprOp_9(367L, () => z3Version is null, () => MutateCSharp.Schemata270.ReplaceBinExprOp_21(362L, z3Version, new Version(MutateCSharp.Schemata270.ReplaceNumericConstant_0(350L, 4), MutateCSharp.Schemata270.ReplaceNumericConstant_0(354L, 8), MutateCSharp.Schemata270.ReplaceNumericConstant_0(358L, 6)))))
+            {
+                SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(373L, "model_compress"), MutateCSharp.Schemata270.ReplaceStringConstant_1(374L, "false"));
+            }
+            else
+            {
+                SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(375L, "model.compact"), MutateCSharp.Schemata270.ReplaceStringConstant_1(376L, "false"));
+            }
 
-    [CanBeNull]
-    public static Version GetZ3Version(string proverPath) {
-      var z3Process = new ProcessStartInfo(proverPath, "-version") {
-        CreateNoWindow = true,
-        RedirectStandardError = true,
-        RedirectStandardOutput = true,
-        RedirectStandardInput = true
-      };
-      var run = Process.Start(z3Process);
-      if (run == null) {
-        return null;
-      }
+            // This option helps avoid "time travelling triggers".
+            // See: https://github.com/dafny-lang/dafny/discussions/3362
+            SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(377L, "smt.case_split"), MutateCSharp.Schemata270.ReplaceStringConstant_1(378L, "3"));
 
-      var actualOutput = run.StandardOutput.ReadToEnd();
-      run.WaitForExit();
-      var versionMatch = Z3VersionRegex.Match(actualOutput);
-      if (!versionMatch.Success) {
-        // Might be another solver.
-        return null;
-      }
+            if (MutateCSharp.Schemata270.ReplaceBinExprOp_10(383L, MutateCSharp.Schemata270.ReplaceNumericConstant_0(379L, 3), ArithMode))
+            {
+                SetZ3Option(MutateCSharp.Schemata270.ReplaceStringConstant_1(388L, "smt.arith.nl"), MutateCSharp.Schemata270.ReplaceStringConstant_1(389L, "false"));
+            }
+        }
 
-      var major = int.Parse(versionMatch.Groups["major"].Value);
-      var minor = int.Parse(versionMatch.Groups["minor"].Value);
-      var patch = int.Parse(versionMatch.Groups["patch"].Value);
-      return new Version(major, minor, patch);
-    }
+        protected override string HelpBody => DafnyHelpBody + BoogieHelpBody;
 
-    // Set a Z3 option, but only if it is not overwriting an existing option.
-    private void SetZ3Option(string name, string value) {
-      if (!ProverOptions.Any(o => o.StartsWith($"O:{name}="))) {
-        ProverOptions.Add($"O:{name}={value}");
-      }
-    }
+        protected string BoogieHelpBody => base.HelpBody;
 
-    public void SetZ3Options(Version z3Version) {
-      // Don't allow changing this once set, just in case:
-      // a DooFile will record this and will get confused if it changes.
-      if ((SolverIdentifier != null && SolverIdentifier != "Z3")
-          || (SolverVersion != null && SolverVersion != z3Version)) {
-        throw new Exception("Attempted to set Z3 options more than once");
-      }
-      SolverIdentifier = "Z3";
-      SolverVersion = z3Version;
-
-      // Boogie sets the following Z3 options by default:
-      // smt.mbqi = false
-      // model.compact = false
-      // model.v2 = true
-      // pp.bv_literals = false
-
-      // Boogie also used to set the following options, but does not anymore.
-      SetZ3Option("auto_config", "false");
-      SetZ3Option("type_check", "true");
-      SetZ3Option("smt.qi.eager_threshold", "100"); // TODO: try lowering
-      SetZ3Option("smt.delay_units", "true");
-      SetZ3Option("model_evaluator.completion", "true");
-      SetZ3Option("model.completion", "true");
-      if (z3Version is null || z3Version < new Version(4, 8, 6)) {
-        SetZ3Option("model_compress", "false");
-      } else {
-        SetZ3Option("model.compact", "false");
-      }
-
-      // This option helps avoid "time travelling triggers".
-      // See: https://github.com/dafny-lang/dafny/discussions/3362
-      SetZ3Option("smt.case_split", "3");
-
-      if (3 <= ArithMode) {
-        SetZ3Option("smt.arith.nl", "false");
-      }
-    }
-
-    protected override string HelpBody => DafnyHelpBody + BoogieHelpBody;
-
-    protected string BoogieHelpBody => base.HelpBody;
-
-    protected string DafnyHelpBody =>
-      $@"
+        protected string DafnyHelpBody =>
+          $@"
 All the .dfy files supplied on the command line along with files recursively
 included by 'include' directives are considered a single Dafny program;
 however only those files listed on the command line are verified.
@@ -1557,64 +2007,79 @@ Dafny generally accepts Boogie options and passes these on to Boogie.
 However, some Boogie options, like /loopUnroll, may not be sound for
 Dafny or may not have the same meaning for a Dafny program as it would
 for a similar Boogie program.
-".Replace("\n", "\n  ");
-  }
+".Replace(MutateCSharp.Schemata270.ReplaceStringConstant_1(390L, "\n"), MutateCSharp.Schemata270.ReplaceStringConstant_1(391L, "\n  "));
+    }
 }
 
-class ErrorReportingCommandLineParseState : Bpl.CommandLineParseState {
-  private readonly Errors errors;
-  private IToken token;
+public
+class ErrorReportingCommandLineParseState : Bpl.CommandLineParseState
+{
+    private readonly Errors errors;
+    private IToken token;
 
-  public ErrorReportingCommandLineParseState(string[] args, string toolName, Errors errors, IToken token)
-    : base(args, toolName) {
-    this.errors = errors;
-    this.token = token;
-  }
+    public ErrorReportingCommandLineParseState(string[] args, string toolName, Errors errors, IToken token)
+      : base(args, toolName)
+    {
+        this.errors = errors;
+        this.token = token;
+    }
 
-  public override void Error(string message, params string[] args) {
-    errors.SemErr(GenericErrors.ErrorId.g_option_error, token, string.Format(message, args));
-    EncounteredErrors = true;
-  }
+    public override void Error(string message, params string[] args)
+    {
+        errors.SemErr(GenericErrors.ErrorId.g_option_error, token, string.Format(message, args));
+        EncounteredErrors = MutateCSharp.Schemata270.ReplaceBooleanConstant_2(392L, true);
+    }
 }
 
+public
 /// <summary>
 /// Wrapper object that restricts which options may be applied.
 /// Used by the parser to parse <c>:options</c> strings.
 /// </summary>
-class DafnyAttributeOptions : DafnyOptions {
-  public static readonly HashSet<string> KnownOptions = new() {
-    "functionSyntax",
-    "quantifierSyntax"
-  };
+class DafnyAttributeOptions : DafnyOptions
+{
+    public static readonly HashSet<string> KnownOptions = new()
+    {
+        MutateCSharp.Schemata270.ReplaceStringConstant_1(393L, "functionSyntax"),
+        MutateCSharp.Schemata270.ReplaceStringConstant_1(394L, "quantifierSyntax"
+  )
+    };
 
-  private readonly Errors errors;
-  public IToken Token { get; set; }
+    private readonly Errors errors;
+    public IToken Token { get; set; }
 
-  public DafnyAttributeOptions(DafnyOptions opts, Errors errors) : base(opts) {
-    this.errors = errors;
-    Token = null;
-  }
-
-  protected override Bpl.CommandLineParseState InitializeCommandLineParseState(string[] args) {
-    return new ErrorReportingCommandLineParseState(args, ToolName, errors, Token ?? Microsoft.Dafny.Token.NoToken);
-  }
-
-  private void Unsupported(string name, Bpl.CommandLineParseState ps) {
-    ps.Error($"Option {name} unrecognized or unsupported in ':options' attributes.");
-  }
-
-  protected override void UnknownSwitch(Bpl.CommandLineParseState ps) {
-    Unsupported(ps.s, ps);
-  }
-
-  protected override bool ParseOption(string name, Bpl.CommandLineParseState ps) {
-    if (!KnownOptions.Contains(name)) {
-      return false;
+    public DafnyAttributeOptions(DafnyOptions opts, Errors errors) : base(opts)
+    {
+        this.errors = errors;
+        Token = null;
     }
-    return base.ParseOption(name, ps);
-  }
 
-  protected override void AddFile(string file, Bpl.CommandLineParseState ps) {
-    Unsupported(file, ps);
-  }
+    protected override Bpl.CommandLineParseState InitializeCommandLineParseState(string[] args)
+    {
+        return new ErrorReportingCommandLineParseState(args, ToolName, errors, Token ?? Microsoft.Dafny.Token.NoToken);
+    }
+
+    private void Unsupported(string name, Bpl.CommandLineParseState ps)
+    {
+        ps.Error($"Option {name} unrecognized or unsupported in ':options' attributes.");
+    }
+
+    protected override void UnknownSwitch(Bpl.CommandLineParseState ps)
+    {
+        Unsupported(ps.s, ps);
+    }
+
+    protected override bool ParseOption(string name, Bpl.CommandLineParseState ps)
+    {
+        if (!KnownOptions.Contains(name))
+        {
+            return MutateCSharp.Schemata270.ReplaceBooleanConstant_2(395L, false);
+        }
+        return base.ParseOption(name, ps);
+    }
+
+    protected override void AddFile(string file, Bpl.CommandLineParseState ps)
+    {
+        Unsupported(file, ps);
+    }
 }

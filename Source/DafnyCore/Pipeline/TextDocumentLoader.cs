@@ -4,72 +4,108 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+namespace MutateCSharp
+{
+    internal class Schemata354
+    {
+        private static readonly System.Lazy<long> ActivatedMutantId =
+          new System.Lazy<long>(() =>
+          {
+              var activatedMutant = System.Environment.GetEnvironmentVariable("MUTATE_CSHARP_ACTIVATED_MUTANT354");
+              return !string.IsNullOrEmpty(activatedMutant) ? long.Parse(activatedMutant) : 0;
+          });
 
-namespace Microsoft.Dafny {
-  /// <summary>
-  /// Text document loader implementation that offloads the whole load procedure on one dedicated
-  /// thread with a stack size of 256MB. Since only one thread is used, document loading is implicitely synchronized.
-  /// The verification runs on the calling thread.
-  /// </summary>
-  /// <remarks>
-  /// The increased stack size is necessary to solve the issue https://github.com/dafny-lang/dafny/issues/1447.
-  /// </remarks>
-  public class TextDocumentLoader : ITextDocumentLoader {
-    private readonly ILogger<ITextDocumentLoader> logger;
-    private readonly IDafnyParser parser;
-    private readonly ISymbolResolver symbolResolver;
+        private static bool ActivatedInRange(long lowerBound, long upperBound)
+        {
+            return lowerBound <= ActivatedMutantId.Value && ActivatedMutantId.Value <= upperBound;
+        }
+        internal static bool ReplaceBinExprOp_0(long mutantId, System.Func<bool> argument1, System.Func<bool> argument2)
+        {
+            if (!ActivatedInRange(mutantId, mutantId + 5)) { return argument1() && argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 0) { return argument1() || argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 1) { return argument1() | argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 2) { return argument1() & argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 3) { return argument1() ^ argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 4) { return argument1() == argument2(); }
+            if (ActivatedMutantId.Value == mutantId + 5) { return argument1() != argument2(); }
+            return argument1() && argument2();
+        }
 
-    public TextDocumentLoader(
-      ILogger<ITextDocumentLoader> documentLoader,
-      IDafnyParser parser,
-      ISymbolResolver symbolResolver) {
-      this.logger = documentLoader;
-      this.parser = parser;
-      this.symbolResolver = symbolResolver;
     }
+}
 
-    public async Task<Program> ParseAsync(Compilation compilation, CancellationToken cancellationToken) {
+namespace Microsoft.Dafny
+{
+    /// <summary>
+    /// Text document loader implementation that offloads the whole load procedure on one dedicated
+    /// thread with a stack size of 256MB. Since only one thread is used, document loading is implicitely synchronized.
+    /// The verification runs on the calling thread.
+    /// </summary>
+    /// <remarks>
+    /// The increased stack size is necessary to solve the issue https://github.com/dafny-lang/dafny/issues/1447.
+    /// </remarks>
+    public class TextDocumentLoader : ITextDocumentLoader
+    {
+        private readonly ILogger<ITextDocumentLoader> logger;
+        private readonly IDafnyParser parser;
+        private readonly ISymbolResolver symbolResolver;
+
+        public TextDocumentLoader(
+          ILogger<ITextDocumentLoader> documentLoader,
+          IDafnyParser parser,
+          ISymbolResolver symbolResolver)
+        {
+            this.logger = documentLoader;
+            this.parser = parser;
+            this.symbolResolver = symbolResolver;
+        }
+
+        public async Task<Program> ParseAsync(Compilation compilation, CancellationToken cancellationToken)
+        {
 #pragma warning disable CS1998
-      return await await DafnyMain.LargeStackFactory.StartNew(
-        () => parser.Parse(compilation, cancellationToken), cancellationToken
+            return await await DafnyMain.LargeStackFactory.StartNew(
+              () => parser.Parse(compilation, cancellationToken), cancellationToken
 #pragma warning restore CS1998
-      );
-    }
+            );
+        }
 
-    public async Task<ResolutionResult?> ResolveAsync(Compilation compilation,
-      Program program,
-      CancellationToken cancellationToken) {
+        public async Task<ResolutionResult?> ResolveAsync(Compilation compilation,
+          Program program,
+          CancellationToken cancellationToken)
+        {
 #pragma warning disable CS1998
-      return await await DafnyMain.LargeStackFactory.StartNew(
-        () => ResolveInternal(compilation, program, cancellationToken), cancellationToken);
+            return await await DafnyMain.LargeStackFactory.StartNew(
+              () => ResolveInternal(compilation, program, cancellationToken), cancellationToken);
 #pragma warning restore CS1998
+        }
+
+        private async Task<ResolutionResult?> ResolveInternal(Compilation compilation, Program program, CancellationToken cancellationToken)
+        {
+            if (program.HasParseErrors)
+            {
+                return null;
+            }
+
+            await symbolResolver.ResolveSymbols(compilation, program, cancellationToken);
+
+            compilation.Options.ProcessSolverOptions(compilation.Reporter, compilation.Options.DafnyProject.StartingToken);
+
+            List<ICanVerify>? verifiables;
+            if (compilation.HasErrors)
+            {
+                verifiables = null;
+            }
+            else
+            {
+                var symbols = SymbolExtensions.GetSymbolDescendants(program.DefaultModule);
+                verifiables = symbols.OfType<ICanVerify>().Where(v => MutateCSharp.Schemata354.ReplaceBinExprOp_0(13L, () => MutateCSharp.Schemata354.ReplaceBinExprOp_0(7L, () => MutateCSharp.Schemata354.ReplaceBinExprOp_0(1L, () => !AutoGeneratedToken.Is(v.Tok), () => v.ContainingModule.ShouldVerify(program.Compilation)), () => v.ShouldVerify(program.Compilation)), () => v.ShouldVerify)).ToList();
+            }
+
+            return new ResolutionResult(
+              compilation.HasErrors,
+              program,
+              verifiables
+            );
+        }
     }
-
-    private async Task<ResolutionResult?> ResolveInternal(Compilation compilation, Program program, CancellationToken cancellationToken) {
-      if (program.HasParseErrors) {
-        return null;
-      }
-
-      await symbolResolver.ResolveSymbols(compilation, program, cancellationToken);
-
-      compilation.Options.ProcessSolverOptions(compilation.Reporter, compilation.Options.DafnyProject.StartingToken);
-
-      List<ICanVerify>? verifiables;
-      if (compilation.HasErrors) {
-        verifiables = null;
-      } else {
-        var symbols = SymbolExtensions.GetSymbolDescendants(program.DefaultModule);
-        verifiables = symbols.OfType<ICanVerify>().Where(v => !AutoGeneratedToken.Is(v.Tok) &&
-                                                              v.ContainingModule.ShouldVerify(program.Compilation) &&
-                                                              v.ShouldVerify(program.Compilation) &&
-                                                              v.ShouldVerify).ToList();
-      }
-
-      return new ResolutionResult(
-        compilation.HasErrors,
-        program,
-        verifiables
-      );
-    }
-  }
 }

@@ -346,7 +346,7 @@ public class MultiBackendTest {
     // which just "<user temp directory>/<random name>" would not.
     var randomName = Path.ChangeExtension(Path.GetRandomFileName(), null);
     // Attempts at making this path longer will likely crash javac on Windows with issues like "path too long"
-    var tempOutputDirectory = Path.Combine(Path.GetTempPath(), randomName, randomName);
+    var tempOutputDirectory = Path.Combine("/mnt/volume_lon1_02/artifact/testartifacts", randomName, randomName);
     Directory.CreateDirectory(tempOutputDirectory);
 
     IEnumerable<string> dafnyArgs = new List<string> {

@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 
 namespace Microsoft.Dafny.Triggers;
-
-internal class TriggerAnnotationsCache {
+public class TriggerAnnotationsCache {
   public readonly Dictionary<Expression, HashSet<OldExpr>> ExpressionsInOldContext;
   public readonly Dictionary<Expression, TriggerAnnotation> Annotations;
 

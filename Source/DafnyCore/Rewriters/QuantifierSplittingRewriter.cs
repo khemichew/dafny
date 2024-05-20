@@ -1,8 +1,7 @@
 using System.Diagnostics.Contracts;
 
 namespace Microsoft.Dafny;
-
-internal class QuantifierSplittingRewriter : IRewriter {
+public class QuantifierSplittingRewriter : IRewriter {
   internal QuantifierSplittingRewriter(ErrorReporter reporter) : base(reporter) {
     Contract.Requires(reporter != null);
   }
