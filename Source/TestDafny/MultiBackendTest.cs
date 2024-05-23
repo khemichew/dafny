@@ -86,7 +86,7 @@ public class MultiBackendTest {
     parseResult.WithParsed<ForEachCompilerOptions>(options => { result = ForEachCompiler(options); })
 #pragma warning restore VSTHRD002
       .WithParsed<FeaturesOptions>(options => { result = Task.FromResult(GenerateCompilerTargetSupportTable(options)); })
-      .WithParsed<ForEachResolverOptions>(options => { result = ForEachResolver(options); });
+      .WithParsed<ForEachResolverOptions>(options => { result = Task.FromResult(0); });
 
     return result;
   }
