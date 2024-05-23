@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ namespace Microsoft.Dafny.LanguageServer.Language {
       this.logger = logger;
     }
 
-    public async Task<IReadOnlyList<IVerificationTask>> GetVerificationTasksAsync(ExecutionEngine engine,
+    public Task<IReadOnlyList<IVerificationTask>> GetVerificationTasksAsync(ExecutionEngine engine,
       ResolutionResult resolution,
       ModuleDefinition moduleDefinition,
       CancellationToken cancellationToken) {
@@ -67,7 +68,7 @@ namespace Microsoft.Dafny.LanguageServer.Language {
       // finally {
       //   mutex.Release();
       // }
-      return new IVerificationTask[] {};
+      return Task.FromResult<IReadOnlyList<IVerificationTask>>(ImmutableArray<IVerificationTask>.Empty);
     }
 
     public void Dispose() {
