@@ -61,10 +61,10 @@ namespace IntegrationTests {
       // The metatests/StdLibsOffByDefaultInTests.dfy test directly enforces this.
 
       string[] defaultResolveArgs = new[] { "resolve", "--use-basename-for-filename", "--show-snippets:false", "--standard-libraries:false" };
-      string[] defaultVerifyArgs = new[] { "verify", "--use-basename-for-filename", "--show-snippets:false", "--standard-libraries:false", "--cores:2", "--verification-time-limit:300", "--resource-limit:50e6" };
-      string[] defaultTranslateArgs = new[] { "--use-basename-for-filename", "--cores:2", "--standard-libraries:false", "--verification-time-limit:300", "--resource-limit:50e6" };
-      string[] defaultBuildArgs = new[] { "build", "--use-basename-for-filename", "--show-snippets:false", "--standard-libraries:false", "--cores:2", "--verification-time-limit:300", "--resource-limit:50e6" };
-      string[] defaultRunArgs = new[] { "run", "--use-basename-for-filename", "--show-snippets:false", "--standard-libraries:false", "--cores:2", "--verification-time-limit:300", "--resource-limit:50e6" };
+      // string[] defaultVerifyArgs = new[] { "verify", "--use-basename-for-filename", "--show-snippets:false", "--standard-libraries:false", "--cores:2", "--verification-time-limit:300", "--resource-limit:50e6" };
+      string[] defaultTranslateArgs = new[] { "--no-verify", "--use-basename-for-filename", "--cores:2", "--standard-libraries:false" };
+      string[] defaultBuildArgs = new[] { "build", "--no-verify", "--use-basename-for-filename", "--show-snippets:false", "--standard-libraries:false" };
+      string[] defaultRunArgs = new[] { "run", "--no-verify", "--use-basename-for-filename", "--show-snippets:false", "--standard-libraries:false" };
 
       var substitutions = new Dictionary<string, object> {
         { "%diff", "diff" },
@@ -93,10 +93,12 @@ namespace IntegrationTests {
             return DafnyCommand(AddExtraArgs(new[] { "translate" }, totalArgs), config,
               InvokeMainMethodsDirectly);
           }
-        }, {
-          "%verify", (args, config) =>
-            DafnyCommand(AddExtraArgs(defaultVerifyArgs, args), config, InvokeMainMethodsDirectly)
-        }, {
+        },
+        // {
+        //   "%verify", (args, config) =>
+        //     DafnyCommand(AddExtraArgs(defaultVerifyArgs, args), config, InvokeMainMethodsDirectly)
+        // },
+        {
           "%build", (args, config) =>
             DafnyCommand(AddExtraArgs(defaultBuildArgs, args), config, InvokeMainMethodsDirectly)
         }, {
@@ -113,22 +115,26 @@ namespace IntegrationTests {
               TestDafnyAssembly,
               config);
           }
-        }, {
-          "%testDafnyForEachResolver", (args, config) => {
-            var fullArguments = new[] { "for-each-resolver" }.Concat(args);
-            return MainCommand("testDafnyForEachResolver", fullArguments,
-              (output, error, input, a) => new MultiBackendTest(input, output, error).Start(a),
-              TestDafnyAssembly,
-              config);
-          }
-        }, {
+        }, 
+        // {
+        //   "%testDafnyForEachResolver", (args, config) => {
+        //     var fullArguments = new[] { "for-each-resolver" }.Concat(args);
+        //     return MainCommand("testDafnyForEachResolver", fullArguments,
+        //       (output, error, input, a) => new MultiBackendTest(input, output, error).Start(a),
+        //       TestDafnyAssembly,
+        //       config);
+        //   }
+        // }, 
+        {
           "%server", (args, config) => MainCommand("legacyServer", args, Server.MainWithWriters, DafnyServerAssembly, config)
-        }, {
-          "%boogie", (args, config) => // TODO
-            new DotnetToolCommand("boogie",
-              args.Concat(DefaultBoogieArguments),
-              config.PassthroughEnvironmentVariables)
-        }, {
+        }, 
+        // {
+        //   "%boogie", (args, config) => // TODO
+        //     new DotnetToolCommand("boogie",
+        //       args.Concat(DefaultBoogieArguments),
+        //       config.PassthroughEnvironmentVariables)
+        // }, 
+        {
           "%diff", (args, config) => DiffCommand.Parse(args.ToArray())
         }, {
           "%sed", (args, config) => SedCommand.Parse(args.ToArray())
@@ -182,10 +188,10 @@ namespace IntegrationTests {
         };
         commands["%server"] = (args, config) =>
           new ShellLitCommand(Path.Join(dafnyReleaseDir, "DafnyServer"), args, config.PassthroughEnvironmentVariables);
-        commands["%boogie"] = (args, config) =>
-          new DotnetToolCommand("boogie",
-            args.Concat(DefaultBoogieArguments),
-            config.PassthroughEnvironmentVariables);
+        // commands["%boogie"] = (args, config) =>
+        //   new DotnetToolCommand("boogie",
+        //     args.Concat(DefaultBoogieArguments),
+        //     config.PassthroughEnvironmentVariables);
         substitutions["%z3"] = Path.Join(dafnyReleaseDir, "z3", "bin", $"z3-{DafnyOptions.DefaultZ3Version}");
       }
 

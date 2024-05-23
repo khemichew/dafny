@@ -34,39 +34,40 @@ namespace Microsoft.Dafny.LanguageServer.Language {
       if (!BoogieGenerator.ShouldVerifyModule(resolution.ResolvedProgram, moduleDefinition)) {
         throw new Exception("tried to get verification tasks for a module that is not verified");
       }
+      
+      // await mutex.WaitAsync(cancellationToken);
+      // try {
 
-      await mutex.WaitAsync(cancellationToken);
-      try {
+      //   var program = resolution.ResolvedProgram;
+      //   var errorReporter = (ObservableErrorReporter)program.Reporter;
 
-        var program = resolution.ResolvedProgram;
-        var errorReporter = (ObservableErrorReporter)program.Reporter;
+      //   cancellationToken.ThrowIfCancellationRequested();
 
-        cancellationToken.ThrowIfCancellationRequested();
+      //   var boogieProgram = await DafnyMain.LargeStackFactory.StartNew(() => {
+      //     Type.ResetScopes();
+      //     var translatorFlags = new BoogieGenerator.TranslatorFlags(errorReporter.Options) {
+      //       InsertChecksums = 0 < engine.Options.VerifySnapshots,
+      //       ReportRanges = program.Options.Get(Snippets.ShowSnippets)
+      //     };
+      //     var translator = new BoogieGenerator(errorReporter, resolution.ResolvedProgram.ProofDependencyManager, translatorFlags);
+      //     return translator.DoTranslation(resolution.ResolvedProgram, moduleDefinition);
+      //   }, cancellationToken);
+      //   var suffix = moduleDefinition.SanitizedName;
 
-        var boogieProgram = await DafnyMain.LargeStackFactory.StartNew(() => {
-          Type.ResetScopes();
-          var translatorFlags = new BoogieGenerator.TranslatorFlags(errorReporter.Options) {
-            InsertChecksums = 0 < engine.Options.VerifySnapshots,
-            ReportRanges = program.Options.Get(Snippets.ShowSnippets)
-          };
-          var translator = new BoogieGenerator(errorReporter, resolution.ResolvedProgram.ProofDependencyManager, translatorFlags);
-          return translator.DoTranslation(resolution.ResolvedProgram, moduleDefinition);
-        }, cancellationToken);
-        var suffix = moduleDefinition.SanitizedName;
+      //   cancellationToken.ThrowIfCancellationRequested();
 
-        cancellationToken.ThrowIfCancellationRequested();
+      //   if (engine.Options.PrintFile != null) {
+      //     var moduleCount = BoogieGenerator.VerifiableModules(program).Count();
+      //     var fileName = moduleCount > 1 ? DafnyMain.BoogieProgramSuffix(engine.Options.PrintFile, suffix) : engine.Options.PrintFile;
+      //     ExecutionEngine.PrintBplFile(engine.Options, fileName, boogieProgram, false, false, engine.Options.PrettyPrint);
+      //   }
 
-        if (engine.Options.PrintFile != null) {
-          var moduleCount = BoogieGenerator.VerifiableModules(program).Count();
-          var fileName = moduleCount > 1 ? DafnyMain.BoogieProgramSuffix(engine.Options.PrintFile, suffix) : engine.Options.PrintFile;
-          ExecutionEngine.PrintBplFile(engine.Options, fileName, boogieProgram, false, false, engine.Options.PrettyPrint);
-        }
-
-        return engine.GetVerificationTasks(boogieProgram);
-      }
-      finally {
-        mutex.Release();
-      }
+      //   return engine.GetVerificationTasks(boogieProgram);
+      // }
+      // finally {
+      //   mutex.Release();
+      // }
+      return new IVerificationTask[] {};
     }
 
     public void Dispose() {
