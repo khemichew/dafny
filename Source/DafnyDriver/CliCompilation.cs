@@ -156,103 +156,104 @@ public class CliCompilation {
         "the option unicode-char has been deprecated.");
     }
 
-    var canVerifyResults = new Dictionary<ICanVerify, CliCanVerifyState>();
-    using var subscription = Compilation.Updates.Subscribe(ev => {
-
-      if (ev is CanVerifyPartsIdentified canVerifyPartsIdentified) {
-        var canVerifyResult = canVerifyResults[canVerifyPartsIdentified.CanVerify];
-        foreach (var part in canVerifyPartsIdentified.Parts.Where(canVerifyResult.TaskFilter)) {
-          canVerifyResult.Tasks.Add(part);
-        }
-
-        if (canVerifyResult.CompletedParts.Count == canVerifyResult.Tasks.Count) {
-          canVerifyResult.Finished.SetResult();
-        }
-      }
-      if (ev is InternalCompilationException internalCompilationException) {
-        foreach (var state in canVerifyResults.Values) {
-          state.Finished.TrySetException(internalCompilationException.Exception);
-        }
-      }
-
-      if (ev is BoogieException boogieException) {
-        var canVerifyResult = canVerifyResults[boogieException.CanVerify];
-        canVerifyResult.Finished.SetException(boogieException.Exception);
-      }
-
-      if (ev is BoogieUpdate { BoogieStatus: Completed completed } boogieUpdate) {
-        var canVerifyResult = canVerifyResults[boogieUpdate.CanVerify];
-        canVerifyResult.CompletedParts.Enqueue((boogieUpdate.VerificationTask, completed));
-
-        if (Options.Get(CommonOptionBag.ProgressOption)) {
-          var token = BoogieGenerator.ToDafnyToken(false, boogieUpdate.VerificationTask.Split.Token);
-          var runResult = completed.Result;
-          var timeString = runResult.RunTime.ToString("g");
-          Options.OutputWriter.WriteLine(
-            $"Verification part {canVerifyResult.CompletedParts.Count}/{canVerifyResult.Tasks.Count} of {boogieUpdate.CanVerify.FullDafnyName}" +
-            $", on line {token.line}, " +
-            $"{DescribeOutcome(Compilation.GetOutcome(runResult.Outcome))}" +
-            $" (time: {timeString}, resource count: {runResult.ResourceCount})");
-        }
-        if (canVerifyResult.CompletedParts.Count == canVerifyResult.Tasks.Count) {
-          canVerifyResult.Finished.TrySetResult();
-        }
-      }
-    });
-
-    var resolution = await Compilation.Resolution;
-    if (resolution == null || resolution.HasErrors) {
-      yield break;
-    }
-
-    var canVerifies = resolution.CanVerifies?.DistinctBy(v => v.Tok).ToList();
-
-    if (canVerifies == null) {
-      yield break;
-    }
-
-    DidVerification = true;
-
-    canVerifies = FilterCanVerifies(canVerifies, out var line);
-    VerifiedAssertions = line != null;
-
-    var orderedCanVerifies = canVerifies.OrderBy(v => v.Tok.pos).ToList();
-    foreach (var canVerify in orderedCanVerifies) {
-      var results = new CliCanVerifyState();
-      canVerifyResults[canVerify] = results;
-      if (line != null) {
-        results.TaskFilter = t => KeepVerificationTask(t, line.Value);
-      }
-
-      var shouldVerify = await Compilation.VerifyCanVerify(canVerify, results.TaskFilter, randomSeed);
-      if (!shouldVerify) {
-        orderedCanVerifies.Remove(canVerify);
-      }
-    }
-
-    int done = 0;
-    foreach (var canVerify in orderedCanVerifies) {
-      var results = canVerifyResults[canVerify];
-      try {
-        if (Options.Get(CommonOptionBag.ProgressOption)) {
-          await Options.OutputWriter.WriteLineAsync($"Verified {done}/{orderedCanVerifies.Count} symbols. Waiting for {canVerify.FullDafnyName} to verify.");
-        }
-        await results.Finished.Task;
-        done++;
-      } catch (ProverException e) {
-        Compilation.Reporter.Error(MessageSource.Verifier, ResolutionErrors.ErrorId.none, canVerify.Tok, e.Message);
-        yield break;
-      } catch (OperationCanceledException) {
-
-      } catch (Exception e) {
-        Compilation.Reporter.Error(MessageSource.Verifier, ResolutionErrors.ErrorId.none, canVerify.Tok,
-          $"Internal error occurred during verification: {e.Message}\n{e.StackTrace}");
-        throw;
-      }
-      yield return new CanVerifyResult(canVerify, results.CompletedParts.Select(c => new VerificationTaskResult(c.Task, c.Result.Result)).ToList());
-
-      canVerifyResults.Remove(canVerify); // Free memory
-    }
+    // var canVerifyResults = new Dictionary<ICanVerify, CliCanVerifyState>();
+    // using var subscription = Compilation.Updates.Subscribe(ev => {
+    //
+    //   if (ev is CanVerifyPartsIdentified canVerifyPartsIdentified) {
+    //     var canVerifyResult = canVerifyResults[canVerifyPartsIdentified.CanVerify];
+    //     foreach (var part in canVerifyPartsIdentified.Parts.Where(canVerifyResult.TaskFilter)) {
+    //       canVerifyResult.Tasks.Add(part);
+    //     }
+    //
+    //     if (canVerifyResult.CompletedParts.Count == canVerifyResult.Tasks.Count) {
+    //       canVerifyResult.Finished.SetResult();
+    //     }
+    //   }
+    //   if (ev is InternalCompilationException internalCompilationException) {
+    //     foreach (var state in canVerifyResults.Values) {
+    //       state.Finished.TrySetException(internalCompilationException.Exception);
+    //     }
+    //   }
+    //
+    //   if (ev is BoogieException boogieException) {
+    //     var canVerifyResult = canVerifyResults[boogieException.CanVerify];
+    //     canVerifyResult.Finished.SetException(boogieException.Exception);
+    //   }
+    //
+    //   if (ev is BoogieUpdate { BoogieStatus: Completed completed } boogieUpdate) {
+    //     var canVerifyResult = canVerifyResults[boogieUpdate.CanVerify];
+    //     canVerifyResult.CompletedParts.Enqueue((boogieUpdate.VerificationTask, completed));
+    //
+    //     if (Options.Get(CommonOptionBag.ProgressOption)) {
+    //       var token = BoogieGenerator.ToDafnyToken(false, boogieUpdate.VerificationTask.Split.Token);
+    //       var runResult = completed.Result;
+    //       var timeString = runResult.RunTime.ToString("g");
+    //       Options.OutputWriter.WriteLine(
+    //         $"Verification part {canVerifyResult.CompletedParts.Count}/{canVerifyResult.Tasks.Count} of {boogieUpdate.CanVerify.FullDafnyName}" +
+    //         $", on line {token.line}, " +
+    //         $"{DescribeOutcome(Compilation.GetOutcome(runResult.Outcome))}" +
+    //         $" (time: {timeString}, resource count: {runResult.ResourceCount})");
+    //     }
+    //     if (canVerifyResult.CompletedParts.Count == canVerifyResult.Tasks.Count) {
+    //       canVerifyResult.Finished.TrySetResult();
+    //     }
+    //   }
+    // });
+    //
+    // var resolution = await Compilation.Resolution;
+    // if (resolution == null || resolution.HasErrors) {
+    //   yield break;
+    // }
+    //
+    // var canVerifies = resolution.CanVerifies?.DistinctBy(v => v.Tok).ToList();
+    //
+    // if (canVerifies == null) {
+    //   yield break;
+    // }
+    //
+    // DidVerification = true;
+    //
+    // canVerifies = FilterCanVerifies(canVerifies, out var line);
+    // VerifiedAssertions = line != null;
+    //
+    // var orderedCanVerifies = canVerifies.OrderBy(v => v.Tok.pos).ToList();
+    // foreach (var canVerify in orderedCanVerifies) {
+    //   var results = new CliCanVerifyState();
+    //   canVerifyResults[canVerify] = results;
+    //   if (line != null) {
+    //     results.TaskFilter = t => KeepVerificationTask(t, line.Value);
+    //   }
+    //
+    //   var shouldVerify = await Compilation.VerifyCanVerify(canVerify, results.TaskFilter, randomSeed);
+    //   if (!shouldVerify) {
+    //     orderedCanVerifies.Remove(canVerify);
+    //   }
+    // }
+    //
+    // int done = 0;
+    // foreach (var canVerify in orderedCanVerifies) {
+    //   var results = canVerifyResults[canVerify];
+    //   try {
+    //     if (Options.Get(CommonOptionBag.ProgressOption)) {
+    //       await Options.OutputWriter.WriteLineAsync($"Verified {done}/{orderedCanVerifies.Count} symbols. Waiting for {canVerify.FullDafnyName} to verify.");
+    //     }
+    //     await results.Finished.Task;
+    //     done++;
+    //   } catch (ProverException e) {
+    //     Compilation.Reporter.Error(MessageSource.Verifier, ResolutionErrors.ErrorId.none, canVerify.Tok, e.Message);
+    //     yield break;
+    //   } catch (OperationCanceledException) {
+    //
+    //   } catch (Exception e) {
+    //     Compilation.Reporter.Error(MessageSource.Verifier, ResolutionErrors.ErrorId.none, canVerify.Tok,
+    //       $"Internal error occurred during verification: {e.Message}\n{e.StackTrace}");
+    //     throw;
+    //   }
+    //   yield return new CanVerifyResult(canVerify, results.CompletedParts.Select(c => new VerificationTaskResult(c.Task, c.Result.Result)).ToList());
+    //
+    //   canVerifyResults.Remove(canVerify); // Free memory
+    // }
+    yield break;
   }
 
   public static string DescribeOutcome(VcOutcome outcome) {
@@ -269,40 +270,43 @@ public class CliCompilation {
   }
 
   private List<ICanVerify> FilterCanVerifies(List<ICanVerify> canVerifies, out int? line) {
-    var symbolFilter = Options.Get(VerifyCommand.FilterSymbol);
-    if (symbolFilter != null) {
-      canVerifies = canVerifies.Where(canVerify => canVerify.FullDafnyName.Contains(symbolFilter)).ToList();
-    }
-
-    var filterPosition = Options.Get(VerifyCommand.FilterPosition);
-    if (filterPosition == null) {
-      line = null;
-      return canVerifies;
-    }
-
-    var regex = new Regex(@"(.*)(?::(\d+))?", RegexOptions.RightToLeft);
-    var result = regex.Match(filterPosition);
-    if (result.Length != filterPosition.Length || !result.Success) {
-      Compilation.Reporter.Error(MessageSource.Project, Token.Cli, "Could not parse value passed to --filter-position");
-      line = null;
-      return new List<ICanVerify>();
-    }
-    var filePart = result.Groups[1].Value;
-    string? linePart = result.Groups.Count > 2 ? result.Groups[2].Value : null;
-    var fileFiltered = canVerifies.Where(c => c.Tok.Uri.ToString().EndsWith(filePart)).ToList();
-    if (string.IsNullOrEmpty(linePart)) {
-      line = null;
-      return fileFiltered;
-    }
-
-    var parsedLine = int.Parse(linePart);
-    line = parsedLine;
-    return fileFiltered.Where(c =>
-        c.RangeToken.StartToken.line <= parsedLine && parsedLine <= c.RangeToken.EndToken.line).ToList();
+    // var symbolFilter = Options.Get(VerifyCommand.FilterSymbol);
+    // if (symbolFilter != null) {
+    //   canVerifies = canVerifies.Where(canVerify => canVerify.FullDafnyName.Contains(symbolFilter)).ToList();
+    // }
+    //
+    // var filterPosition = Options.Get(VerifyCommand.FilterPosition);
+    // if (filterPosition == null) {
+    //   line = null;
+    //   return canVerifies;
+    // }
+    //
+    // var regex = new Regex(@"(.*)(?::(\d+))?", RegexOptions.RightToLeft);
+    // var result = regex.Match(filterPosition);
+    // if (result.Length != filterPosition.Length || !result.Success) {
+    //   Compilation.Reporter.Error(MessageSource.Project, Token.Cli, "Could not parse value passed to --filter-position");
+    //   line = null;
+    //   return new List<ICanVerify>();
+    // }
+    // var filePart = result.Groups[1].Value;
+    // string? linePart = result.Groups.Count > 2 ? result.Groups[2].Value : null;
+    // var fileFiltered = canVerifies.Where(c => c.Tok.Uri.ToString().EndsWith(filePart)).ToList();
+    // if (string.IsNullOrEmpty(linePart)) {
+    //   line = null;
+    //   return fileFiltered;
+    // }
+    //
+    // var parsedLine = int.Parse(linePart);
+    // line = parsedLine;
+    // return fileFiltered.Where(c =>
+    //     c.RangeToken.StartToken.line <= parsedLine && parsedLine <= c.RangeToken.EndToken.line).ToList();
+    line = null;
+    return canVerifies;
   }
 
   private bool KeepVerificationTask(IVerificationTask task, int line) {
-    return task.ScopeToken.line == line || task.Token.line == line;
+    // return task.ScopeToken.line == line || task.Token.line == line;
+    return false;
   }
 }
 

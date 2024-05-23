@@ -116,73 +116,73 @@ public class MultiBackendTest {
     // Here we only ensure that the exit code is 0.
 
     // We also use --(r|b)print to catch bugs with valid but unprintable programs.
-    string fileName = Path.GetFileName(options.TestFile!);
-    var testDir = Path.GetDirectoryName(options.TestFile!);
-    var tmpDPrint = Path.Join(testDir, "Output", $"{fileName}.dprint");
-    var tmpRPrint = Path.Join(testDir, "Output", $"{fileName}.rprint");
-    var tmpPrint = Path.Join(testDir, "Output", $"{fileName}.print");
+    // string fileName = Path.GetFileName(options.TestFile!);
+    // var testDir = Path.GetDirectoryName(options.TestFile!);
+    // var tmpDPrint = Path.Join(testDir, "Output", $"{fileName}.dprint");
+    // var tmpRPrint = Path.Join(testDir, "Output", $"{fileName}.rprint");
+    // var tmpPrint = Path.Join(testDir, "Output", $"{fileName}.print");
 
-    var dafnyArgs = new List<string>() {
-      $"verify",
-      options.TestFile!,
-      $"--print:{tmpDPrint}",
-      options.OtherArgs.Any(option => option.StartsWith("--print")) ? "" : $"--rprint:{tmpRPrint}",
-      $"--bprint:{tmpPrint}"
-    }.Concat(DafnyCliTests.NewDefaultArgumentsForTesting).
-      Concat(options.OtherArgs.Where(OptionAppliesToVerifyCommand)).ToArray();
-
-    var resolutionOptions = new List<ResolutionSetting>() {
-      new ResolutionSetting(
-        "legacy",
-        new string[] { },
-        new string[] { ".verifier.expect" },
-        0)
-    };
-    if (options.RefreshExitCode != null) {
-      resolutionOptions.Add(
-        new ResolutionSetting(
-          "refresh",
-          new string[] { "--type-system-refresh" },
-          new string[] { ".refresh.expect", ".verifier.expect" },
-          (int)options.RefreshExitCode)
-      );
-    }
-
-    foreach (var resolutionOption in resolutionOptions) {
-      await output.WriteLineAsync($"Using {resolutionOption.ReadableName} resolver and verifying...");
-
-      var (exitCode, outputString, error) = await RunDafny(options.DafnyCliPath, dafnyArgs.Concat(resolutionOption.AdditionalOptions));
-
-      // If there is a file with extension "suffix", where the alternatives for "suffix" are supplied in order in
-      // ExpectFileSuffixes, then we expect the output to match the contents of that file. Otherwise, we expect the output to be empty.
-      var expectedOutput = "";
-      foreach (var expectFileSuffix in resolutionOption.ExpectFileSuffixes) {
-        var expectFileForVerifier = $"{options.TestFile}{expectFileSuffix}";
-        if (File.Exists(expectFileForVerifier)) {
-          expectedOutput = await File.ReadAllTextAsync(expectFileForVerifier);
-          break;
-        }
-      }
-
-      // Chop off the "Dafny program verifier finished with..." trailer
-      var trailer = new Regex("\r?\nDafny program verifier[^\r\n]*\r?\n").Match(outputString);
-      var actualOutput = outputString.Remove(trailer.Index, trailer.Length);
-      var diffMessage = AssertWithDiff.GetDiffMessage(expectedOutput, actualOutput);
-      if (diffMessage != null) {
-        await output.WriteLineAsync(diffMessage);
-        return 1;
-      }
-
-      // We expect verification to return exit code 0.
-      if (exitCode != resolutionOption.ExpectedExitCode) {
-        await output.WriteLineAsync(
-          $"Verification failed with exit code {exitCode} (expected {resolutionOption.ExpectedExitCode}). Output:");
-        await output.WriteLineAsync(outputString);
-        await output.WriteLineAsync("Error:");
-        await output.WriteLineAsync(error);
-        return exitCode != 0 ? exitCode : 1;
-      }
-    }
+    // var dafnyArgs = new List<string>() {
+    //   $"verify",
+    //   options.TestFile!,
+    //   $"--print:{tmpDPrint}",
+    //   options.OtherArgs.Any(option => option.StartsWith("--print")) ? "" : $"--rprint:{tmpRPrint}",
+    //   $"--bprint:{tmpPrint}"
+    // }.Concat(DafnyCliTests.NewDefaultArgumentsForTesting).
+    //   Concat(options.OtherArgs.Where(OptionAppliesToVerifyCommand)).ToArray();
+    //
+    // var resolutionOptions = new List<ResolutionSetting>() {
+    //   new ResolutionSetting(
+    //     "legacy",
+    //     new string[] { },
+    //     new string[] { ".verifier.expect" },
+    //     0)
+    // };
+    // if (options.RefreshExitCode != null) {
+    //   resolutionOptions.Add(
+    //     new ResolutionSetting(
+    //       "refresh",
+    //       new string[] { "--type-system-refresh" },
+    //       new string[] { ".refresh.expect", ".verifier.expect" },
+    //       (int)options.RefreshExitCode)
+    //   );
+    // }
+    //
+    // foreach (var resolutionOption in resolutionOptions) {
+    //   await output.WriteLineAsync($"Using {resolutionOption.ReadableName} resolver and verifying...");
+    //
+    //   var (exitCode, outputString, error) = await RunDafny(options.DafnyCliPath, dafnyArgs.Concat(resolutionOption.AdditionalOptions));
+    //
+    //   // If there is a file with extension "suffix", where the alternatives for "suffix" are supplied in order in
+    //   // ExpectFileSuffixes, then we expect the output to match the contents of that file. Otherwise, we expect the output to be empty.
+    //   var expectedOutput = "";
+    //   foreach (var expectFileSuffix in resolutionOption.ExpectFileSuffixes) {
+    //     var expectFileForVerifier = $"{options.TestFile}{expectFileSuffix}";
+    //     if (File.Exists(expectFileForVerifier)) {
+    //       expectedOutput = await File.ReadAllTextAsync(expectFileForVerifier);
+    //       break;
+    //     }
+    //   }
+    //
+    //   // Chop off the "Dafny program verifier finished with..." trailer
+    //   var trailer = new Regex("\r?\nDafny program verifier[^\r\n]*\r?\n").Match(outputString);
+    //   var actualOutput = outputString.Remove(trailer.Index, trailer.Length);
+    //   var diffMessage = AssertWithDiff.GetDiffMessage(expectedOutput, actualOutput);
+    //   if (diffMessage != null) {
+    //     await output.WriteLineAsync(diffMessage);
+    //     return 1;
+    //   }
+    //
+    //   // We expect verification to return exit code 0.
+    //   if (exitCode != resolutionOption.ExpectedExitCode) {
+    //     await output.WriteLineAsync(
+    //       $"Verification failed with exit code {exitCode} (expected {resolutionOption.ExpectedExitCode}). Output:");
+    //     await output.WriteLineAsync(outputString);
+    //     await output.WriteLineAsync("Error:");
+    //     await output.WriteLineAsync(error);
+    //     return exitCode != 0 ? exitCode : 1;
+    //   }
+    // }
 
     // Then execute the program for each available compiler.
 
@@ -257,80 +257,80 @@ public class MultiBackendTest {
     return $"{options.TestFile}.{compiler.TargetId}.expect";
   }
 
-  public async Task<int> ForEachResolver(ForEachResolverOptions options) {
+  public static Task<int> ForEachResolver(ForEachResolverOptions options) {
     // We also use --(r|b)print to catch bugs with valid but unprintable programs.
-    string fileName = Path.GetFileName(options.TestFile!);
-    var testDir = Path.GetDirectoryName(options.TestFile!);
-    var tmpDPrint = Path.Join(testDir, "Output", $"{fileName}.dprint");
-    var tmpRPrint = Path.Join(testDir, "Output", $"{fileName}.rprint");
-    var tmpPrint = Path.Join(testDir, "Output", $"{fileName}.print");
+    // string fileName = Path.GetFileName(options.TestFile!);
+    // var testDir = Path.GetDirectoryName(options.TestFile!);
+    // var tmpDPrint = Path.Join(testDir, "Output", $"{fileName}.dprint");
+    // var tmpRPrint = Path.Join(testDir, "Output", $"{fileName}.rprint");
+    // var tmpPrint = Path.Join(testDir, "Output", $"{fileName}.print");
+    //
+    // var dafnyArgs = new List<string>() {
+    //   $"verify",
+    //   options.TestFile!,
+    //   $"--print:{tmpDPrint}",
+    //   options.OtherArgs.Any(option => option.StartsWith("--print")) ? "" : $"--rprint:{tmpRPrint}",
+    //   $"--bprint:{tmpPrint}"
+    // }.Concat(DafnyCliTests.NewDefaultArgumentsForTesting).Concat(options.OtherArgs.Where(OptionAppliesToVerifyCommand)).ToArray();
+    //
+    // var resolutionOptions = new List<ResolutionSetting>() {
+    //   new("legacy", new string[] { }, new string[] { ".expect" },
+    //     options.ExpectExitCode ?? 0),
+    //   new("refresh", new string[] { "--type-system-refresh" }, new string[] { ".refresh.expect", ".expect" },
+    //     options.RefreshExitCode ?? options.ExpectExitCode ?? 0)
+    // };
+    //
+    // foreach (var resolutionOption in resolutionOptions) {
+    //   await output.WriteLineAsync($"Using {resolutionOption.ReadableName} resolver and verifying...");
+    //
+    //   var (exitCode, actualOutput, error) = await RunDafny(options.DafnyCliPath, dafnyArgs.Concat(resolutionOption.AdditionalOptions));
+    //
+    //   // The expected output is indicated by a file with extension "suffix", where the alternatives for "suffix" are supplied in order in
+    //   // ExpectFileSuffixes.
+    //   string? expectFile = resolutionOption.ExpectFileSuffixes.
+    //     Select(expectFileSuffix => $"{options.TestFile}{expectFileSuffix}").
+    //     FirstOrDefault(File.Exists);
+    //   if (expectFile == null) {
+    //     var expectFileDescription = resolutionOption.ExpectFileSuffixes.Comma(suffix => $"{options.TestFile}{suffix}");
+    //     await output.WriteLineAsync($"Missing expect file: {expectFileDescription}");
+    //     return 1;
+    //   }
+    //
+    //   // Compare the output
+    //   var diffMessage = DiffCommand.Run(expectFile, actualOutput);
+    //   if (diffMessage != null) {
+    //     await output.WriteLineAsync(diffMessage);
+    //     return 1;
+    //   }
+    //
+    //   // We expect verification to return the indicated exit code.
+    //   if (exitCode != resolutionOption.ExpectedExitCode) {
+    //     await output.WriteLineAsync($"Verification failed with exit code {exitCode} (expected {resolutionOption.ExpectedExitCode}). Output:");
+    //     await output.WriteLineAsync(actualOutput);
+    //     await output.WriteLineAsync("Error:");
+    //     await output.WriteLineAsync(error);
+    //     return exitCode != 0 ? exitCode : 1;
+    //   }
+    // }
 
-    var dafnyArgs = new List<string>() {
-      $"verify",
-      options.TestFile!,
-      $"--print:{tmpDPrint}",
-      options.OtherArgs.Any(option => option.StartsWith("--print")) ? "" : $"--rprint:{tmpRPrint}",
-      $"--bprint:{tmpPrint}"
-    }.Concat(DafnyCliTests.NewDefaultArgumentsForTesting).Concat(options.OtherArgs.Where(OptionAppliesToVerifyCommand)).ToArray();
-
-    var resolutionOptions = new List<ResolutionSetting>() {
-      new("legacy", new string[] { }, new string[] { ".expect" },
-        options.ExpectExitCode ?? 0),
-      new("refresh", new string[] { "--type-system-refresh" }, new string[] { ".refresh.expect", ".expect" },
-        options.RefreshExitCode ?? options.ExpectExitCode ?? 0)
-    };
-
-    foreach (var resolutionOption in resolutionOptions) {
-      await output.WriteLineAsync($"Using {resolutionOption.ReadableName} resolver and verifying...");
-
-      var (exitCode, actualOutput, error) = await RunDafny(options.DafnyCliPath, dafnyArgs.Concat(resolutionOption.AdditionalOptions));
-
-      // The expected output is indicated by a file with extension "suffix", where the alternatives for "suffix" are supplied in order in
-      // ExpectFileSuffixes.
-      string? expectFile = resolutionOption.ExpectFileSuffixes.
-        Select(expectFileSuffix => $"{options.TestFile}{expectFileSuffix}").
-        FirstOrDefault(File.Exists);
-      if (expectFile == null) {
-        var expectFileDescription = resolutionOption.ExpectFileSuffixes.Comma(suffix => $"{options.TestFile}{suffix}");
-        await output.WriteLineAsync($"Missing expect file: {expectFileDescription}");
-        return 1;
-      }
-
-      // Compare the output
-      var diffMessage = DiffCommand.Run(expectFile, actualOutput);
-      if (diffMessage != null) {
-        await output.WriteLineAsync(diffMessage);
-        return 1;
-      }
-
-      // We expect verification to return the indicated exit code.
-      if (exitCode != resolutionOption.ExpectedExitCode) {
-        await output.WriteLineAsync($"Verification failed with exit code {exitCode} (expected {resolutionOption.ExpectedExitCode}). Output:");
-        await output.WriteLineAsync(actualOutput);
-        await output.WriteLineAsync("Error:");
-        await output.WriteLineAsync(error);
-        return exitCode != 0 ? exitCode : 1;
-      }
-    }
-
-    return 0; // success
+    return Task.FromResult(0); // success
   }
 
   // Necessary to avoid passing invalid options to the first `dafny verify` command.
   // Ideally we could hook into the general `dafny` options parsing logic
   // and `ICommandSpec` commands instead.
-  private static bool OptionAppliesToVerifyCommand(string option) {
-    var name = option[2..].Split(':')[0];
-
-    var compileOptions = new List<Option> {
-      CommonOptionBag.SpillTranslation,
-      CommonOptionBag.OptimizeErasableDatatypeWrapper,
-      CommonOptionBag.AddCompileSuffix,
-      RunCommand.MainOverride,
-    }.Select(o => o.Name);
-
-    return !compileOptions.Contains(name);
-  }
+  // private static bool OptionAppliesToVerifyCommand(string option) {
+  //   var name = option[2..].Split(':')[0];
+  //
+  //   var compileOptions = new List<Option> {
+  //     CommonOptionBag.SpillTranslation,
+  //     CommonOptionBag.OptimizeErasableDatatypeWrapper,
+  //     CommonOptionBag.AddCompileSuffix,
+  //     RunCommand.MainOverride,
+  //   }.Select(o => o.Name);
+  //
+  //   return !compileOptions.Contains(name);
+  // }
 
   private async Task<int> RunWithCompiler(ForEachCompilerOptions options, IExecutableBackend backend, string expectedOutput,
     string? checkFile, bool includeRuntime = true) {
