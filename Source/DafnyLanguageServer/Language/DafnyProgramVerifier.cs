@@ -31,10 +31,9 @@ namespace Microsoft.Dafny.LanguageServer.Language {
       ResolutionResult resolution,
       ModuleDefinition moduleDefinition,
       CancellationToken cancellationToken) {
-
-      if (!BoogieGenerator.ShouldVerifyModule(resolution.ResolvedProgram, moduleDefinition)) {
-        throw new Exception("tried to get verification tasks for a module that is not verified");
-      }
+      // if (!BoogieGenerator.ShouldVerifyModule(resolution.ResolvedProgram, moduleDefinition)) {
+      //   throw new Exception("tried to get verification tasks for a module that is not verified");
+      // }
       
       // await mutex.WaitAsync(cancellationToken);
       // try {
