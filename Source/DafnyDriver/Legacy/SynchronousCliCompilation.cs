@@ -283,23 +283,23 @@ namespace Microsoft.Dafny {
           && options.DafnyVerify) {
 
         dafnyProgram.ProofDependencyManager = depManager;
-        var boogiePrograms =
-          await DafnyMain.LargeStackFactory.StartNew(() => Translate(engine.Options, dafnyProgram).ToList());
+        // var boogiePrograms =
+        //   await DafnyMain.LargeStackFactory.StartNew(() => Translate(engine.Options, dafnyProgram).ToList());
 
         // string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
         // var (verified, outcome, moduleStats) =
         //   await BoogieAsync(dafnyProgram.Reporter, options, baseName, boogiePrograms, programId);
 
-        if (options.TrackVerificationCoverage) {
-          ProofDependencyWarnings.WarnAboutSuspiciousDependencies(options, dafnyProgram.Reporter, depManager);
-          var coverageReportDir = options.Get(CommonOptionBag.VerificationCoverageReport);
-          if (coverageReportDir != null) {
-            await new CoverageReporter(options).SerializeVerificationCoverageReport(
-              depManager, dafnyProgram,
-              boogiePrograms.SelectMany(tp => tp.Item2.AllCoveredElements),
-              coverageReportDir);
-          }
-        }
+        // if (options.TrackVerificationCoverage) {
+        //   ProofDependencyWarnings.WarnAboutSuspiciousDependencies(options, dafnyProgram.Reporter, depManager);
+        //   var coverageReportDir = options.Get(CommonOptionBag.VerificationCoverageReport);
+        //   if (coverageReportDir != null) {
+        //     await new CoverageReporter(options).SerializeVerificationCoverageReport(
+        //       depManager, dafnyProgram,
+        //       boogiePrograms.SelectMany(tp => tp.Item2.AllCoveredElements),
+        //       coverageReportDir);
+        //   }
+        // }
 
         bool compiled;
         try {
@@ -366,12 +366,12 @@ namespace Microsoft.Dafny {
       options.OutputWriter.Write(model.ToString());
     }
 
-    private static string BoogieProgramSuffix(string printFile, string suffix) {
-      var baseName = Path.GetFileNameWithoutExtension(printFile);
-      var dirName = Path.GetDirectoryName(printFile);
-
-      return Path.Combine(dirName, baseName + "_" + suffix + Path.GetExtension(printFile));
-    }
+    // private static string BoogieProgramSuffix(string printFile, string suffix) {
+    //   var baseName = Path.GetFileNameWithoutExtension(printFile);
+    //   var dirName = Path.GetDirectoryName(printFile);
+    //
+    //   return Path.Combine(dirName, baseName + "_" + suffix + Path.GetExtension(printFile));
+    // }
 
     public static IEnumerable<Tuple<string, Bpl.Program>> Translate(ExecutionEngineOptions options, Program dafnyProgram) {
       var modulesCount = BoogieGenerator.VerifiableModules(dafnyProgram).Count();
@@ -391,79 +391,79 @@ namespace Microsoft.Dafny {
       }
     }
 
-    public async Task<(bool IsVerified, PipelineOutcome Outcome, IDictionary<string, PipelineStatistics> ModuleStats)>
-      BoogieAsync(
-        ErrorReporter errorReporter,
-        DafnyOptions options,
-        string baseName,
-        IEnumerable<Tuple<string, Bpl.Program>> boogiePrograms, string programId) {
-      var concurrentModuleStats = new ConcurrentDictionary<string, PipelineStatistics>();
-      var writerManager = new ConcurrentToSequentialWriteManager(options.OutputWriter);
+    // public async Task<(bool IsVerified, PipelineOutcome Outcome, IDictionary<string, PipelineStatistics> ModuleStats)>
+    //   BoogieAsync(
+    //     ErrorReporter errorReporter,
+    //     DafnyOptions options,
+    //     string baseName,
+    //     IEnumerable<Tuple<string, Bpl.Program>> boogiePrograms, string programId) {
+    //   var concurrentModuleStats = new ConcurrentDictionary<string, PipelineStatistics>();
+    //   var writerManager = new ConcurrentToSequentialWriteManager(options.OutputWriter);
+    //
+    //   if (options.Verify || options.Get(BoogieOptionBag.HiddenNoVerify)) {
+    //     var before = errorReporter.ErrorCount;
+    //     options.ProcessSolverOptions(errorReporter, Token.Cli);
+    //     if (before != errorReporter.ErrorCount) {
+    //       return (false, PipelineOutcome.FatalError, concurrentModuleStats);
+    //     }
+    //   }
+    //
+    //   var moduleTasks = boogiePrograms.Select(async program => {
+    //     await using var moduleWriter = writerManager.AppendWriter();
+    //     // ReSharper disable once AccessToDisposedClosure
+    //     var result = await Task.Run(() =>
+    //       BoogieOnceWithTimerAsync(errorReporter, moduleWriter, options, baseName, programId, program.Item1, program.Item2));
+    //     concurrentModuleStats.TryAdd(program.Item1, result.Stats);
+    //     return result;
+    //   }).ToList();
+    //
+    //   await Task.WhenAll(moduleTasks);
+    //   await options.OutputWriter.FlushAsync();
+    //   var outcome = moduleTasks.Select(t => t.Result.Outcome)
+    //     .Aggregate(PipelineOutcome.VerificationCompleted, MergeOutcomes);
+    //
+    //   var isVerified = moduleTasks.Select(t =>
+    //     DafnyMain.IsBoogieVerified(t.Result.Outcome, t.Result.Stats)).All(x => x);
+    //   return (isVerified, outcome, concurrentModuleStats);
+    // }
+    //
+    // private async Task<(PipelineOutcome Outcome, PipelineStatistics Stats)> BoogieOnceWithTimerAsync(
+    //   ErrorReporter errorReporter,
+    //   TextWriter output,
+    //   DafnyOptions options,
+    //   string baseName, string programId,
+    //   string moduleName,
+    //   Bpl.Program program) {
+    //   Stopwatch watch = new Stopwatch();
+    //   watch.Start();
+    //   if (options.SeparateModuleOutput) {
+    //     options.Printer.AdvisoryWriteLine(output, "For module: {0}", moduleName);
+    //   }
+    //
+    //   var result =
+    //     await DafnyMain.BoogieOnce(errorReporter, options, output, engine, baseName, moduleName, program, programId);
+    //
+    //   watch.Stop();
+    //
+    //   if (options.SeparateModuleOutput) {
+    //     TimeSpan ts = watch.Elapsed;
+    //     string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
+    //     options.Printer.AdvisoryWriteLine(output, "Elapsed time: {0}", elapsedTime);
+    //     WriteTrailer(options, output, result.Statistics);
+    //   }
+    //
+    //   return result;
+    // }
 
-      if (options.Verify || options.Get(BoogieOptionBag.HiddenNoVerify)) {
-        var before = errorReporter.ErrorCount;
-        options.ProcessSolverOptions(errorReporter, Token.Cli);
-        if (before != errorReporter.ErrorCount) {
-          return (false, PipelineOutcome.FatalError, concurrentModuleStats);
-        }
-      }
-
-      var moduleTasks = boogiePrograms.Select(async program => {
-        await using var moduleWriter = writerManager.AppendWriter();
-        // ReSharper disable once AccessToDisposedClosure
-        var result = await Task.Run(() =>
-          BoogieOnceWithTimerAsync(errorReporter, moduleWriter, options, baseName, programId, program.Item1, program.Item2));
-        concurrentModuleStats.TryAdd(program.Item1, result.Stats);
-        return result;
-      }).ToList();
-
-      await Task.WhenAll(moduleTasks);
-      await options.OutputWriter.FlushAsync();
-      var outcome = moduleTasks.Select(t => t.Result.Outcome)
-        .Aggregate(PipelineOutcome.VerificationCompleted, MergeOutcomes);
-
-      var isVerified = moduleTasks.Select(t =>
-        DafnyMain.IsBoogieVerified(t.Result.Outcome, t.Result.Stats)).All(x => x);
-      return (isVerified, outcome, concurrentModuleStats);
-    }
-
-    private async Task<(PipelineOutcome Outcome, PipelineStatistics Stats)> BoogieOnceWithTimerAsync(
-      ErrorReporter errorReporter,
-      TextWriter output,
-      DafnyOptions options,
-      string baseName, string programId,
-      string moduleName,
-      Bpl.Program program) {
-      Stopwatch watch = new Stopwatch();
-      watch.Start();
-      if (options.SeparateModuleOutput) {
-        options.Printer.AdvisoryWriteLine(output, "For module: {0}", moduleName);
-      }
-
-      var result =
-        await DafnyMain.BoogieOnce(errorReporter, options, output, engine, baseName, moduleName, program, programId);
-
-      watch.Stop();
-
-      if (options.SeparateModuleOutput) {
-        TimeSpan ts = watch.Elapsed;
-        string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
-        options.Printer.AdvisoryWriteLine(output, "Elapsed time: {0}", elapsedTime);
-        WriteTrailer(options, output, result.Statistics);
-      }
-
-      return result;
-    }
-
-    private static PipelineOutcome MergeOutcomes(PipelineOutcome first, PipelineOutcome second) {
-
-      if ((first == PipelineOutcome.VerificationCompleted || first == PipelineOutcome.Done) &&
-          second != PipelineOutcome.VerificationCompleted) {
-        return second;
-      }
-
-      return first;
-    }
+    // private static PipelineOutcome MergeOutcomes(PipelineOutcome first, PipelineOutcome second) {
+    //
+    //   if ((first == PipelineOutcome.VerificationCompleted || first == PipelineOutcome.Done) &&
+    //       second != PipelineOutcome.VerificationCompleted) {
+    //     return second;
+    //   }
+    //
+    //   return first;
+    // }
 
     public static void WriteTrailer(DafnyOptions options, TextWriter output, PipelineStatistics stats) {
       if (!options.Verify && stats.ErrorCount == 0) {
