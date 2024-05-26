@@ -118,45 +118,45 @@ public static class VerifyCommand {
 
   private static async Task WriteTrailer(CliCompilation cliCompilation,
     VerificationStatistics statistics) {
-    if (cliCompilation.Options.Verbosity <= CoreOptions.VerbosityLevel.Quiet) {
-      return;
-    }
-
-    if (!cliCompilation.DidVerification) {
-      return;
-    }
-
-    var output = cliCompilation.Options.OutputWriter;
-
-    await output.WriteLineAsync();
-
-    if (cliCompilation.VerifiedAssertions) {
-      await output.WriteAsync($"{cliCompilation.Options.DescriptiveToolName} finished with {statistics.VerifiedAssertions} assertions verified, {statistics.ErrorCount} error{Util.Plural(statistics.ErrorCount)}");
-    } else {
-      await output.WriteAsync($"{cliCompilation.Options.DescriptiveToolName} finished with {statistics.VerifiedSymbols} verified, {statistics.ErrorCount} error{Util.Plural(statistics.ErrorCount)}");
-    };
-    if (statistics.InconclusiveCount != 0) {
-      await output.WriteAsync($", {statistics.InconclusiveCount} inconclusive{Util.Plural(statistics.InconclusiveCount)}");
-    }
-
-    if (statistics.TimeoutCount != 0) {
-      await output.WriteAsync($", {statistics.TimeoutCount} time out{Util.Plural(statistics.TimeoutCount)}");
-    }
-
-    if (statistics.OutOfMemoryCount != 0) {
-      await output.WriteAsync($", {statistics.OutOfMemoryCount} out of memory");
-    }
-
-    if (statistics.OutOfResourceCount != 0) {
-      await output.WriteAsync($", {statistics.OutOfResourceCount} out of resource");
-    }
-
-    if (statistics.SolverExceptionCount != 0) {
-      await output.WriteAsync($", {statistics.SolverExceptionCount} solver exceptions");
-    }
-
-    await output.WriteLineAsync();
-    await output.FlushAsync();
+    // if (cliCompilation.Options.Verbosity <= CoreOptions.VerbosityLevel.Quiet) {
+    //   return;
+    // }
+    //
+    // if (!cliCompilation.DidVerification) {
+    //   return;
+    // }
+    //
+    // var output = cliCompilation.Options.OutputWriter;
+    //
+    // await output.WriteLineAsync();
+    //
+    // if (cliCompilation.VerifiedAssertions) {
+    //   await output.WriteAsync($"{cliCompilation.Options.DescriptiveToolName} finished with {statistics.VerifiedAssertions} assertions verified, {statistics.ErrorCount} error{Util.Plural(statistics.ErrorCount)}");
+    // } else {
+    //   await output.WriteAsync($"{cliCompilation.Options.DescriptiveToolName} finished with {statistics.VerifiedSymbols} verified, {statistics.ErrorCount} error{Util.Plural(statistics.ErrorCount)}");
+    // };
+    // if (statistics.InconclusiveCount != 0) {
+    //   await output.WriteAsync($", {statistics.InconclusiveCount} inconclusive{Util.Plural(statistics.InconclusiveCount)}");
+    // }
+    //
+    // if (statistics.TimeoutCount != 0) {
+    //   await output.WriteAsync($", {statistics.TimeoutCount} time out{Util.Plural(statistics.TimeoutCount)}");
+    // }
+    //
+    // if (statistics.OutOfMemoryCount != 0) {
+    //   await output.WriteAsync($", {statistics.OutOfMemoryCount} out of memory");
+    // }
+    //
+    // if (statistics.OutOfResourceCount != 0) {
+    //   await output.WriteAsync($", {statistics.OutOfResourceCount} out of resource");
+    // }
+    //
+    // if (statistics.SolverExceptionCount != 0) {
+    //   await output.WriteAsync($", {statistics.SolverExceptionCount} solver exceptions");
+    // }
+    //
+    // await output.WriteLineAsync();
+    // await output.FlushAsync();
   }
 
   public static void ReportVerificationDiagnostics(CliCompilation compilation, IObservable<CanVerifyResult> verificationResults) {
