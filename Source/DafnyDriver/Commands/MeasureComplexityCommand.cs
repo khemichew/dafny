@@ -53,24 +53,24 @@ static class MeasureComplexityCommand {
     compilation.Start();
 
     var resolution = await compilation.Resolution;
-    if (resolution != null) {
-      Subject<CanVerifyResult> verificationResults = new();
-
-      // We should redesign the output of this command 
-      // It should start out with a summary that reports how many proofs are brittle, and shows statistical data,
-      // such as averages and standard-deviations.
-      // For error diagnostics, we should group duplicates and say how often they occur.
-      // Performance data of individual verification tasks (VCs) should be grouped by VcNum (the assertion batch).
-      VerifyCommand.ReportVerificationDiagnostics(compilation, verificationResults);
-      var summaryReported = VerifyCommand.ReportVerificationSummary(compilation, verificationResults);
-      var proofDependenciesReported = VerifyCommand.ReportProofDependencies(compilation, resolution, verificationResults);
-      var verificationResultsLogged = VerifyCommand.LogVerificationResults(compilation, resolution, verificationResults);
-
-      await RunVerificationIterations(options, compilation, verificationResults);
-      await summaryReported;
-      await verificationResultsLogged;
-      await proofDependenciesReported;
-    }
+    // if (resolution != null) {
+    //   Subject<CanVerifyResult> verificationResults = new();
+    //
+    //   // We should redesign the output of this command 
+    //   // It should start out with a summary that reports how many proofs are brittle, and shows statistical data,
+    //   // such as averages and standard-deviations.
+    //   // For error diagnostics, we should group duplicates and say how often they occur.
+    //   // Performance data of individual verification tasks (VCs) should be grouped by VcNum (the assertion batch).
+    //   VerifyCommand.ReportVerificationDiagnostics(compilation, verificationResults);
+    //   var summaryReported = VerifyCommand.ReportVerificationSummary(compilation, verificationResults);
+    //   var proofDependenciesReported = VerifyCommand.ReportProofDependencies(compilation, resolution, verificationResults);
+    //   var verificationResultsLogged = VerifyCommand.LogVerificationResults(compilation, resolution, verificationResults);
+    //
+    //   await RunVerificationIterations(options, compilation, verificationResults);
+    //   await summaryReported;
+    //   await verificationResultsLogged;
+    //   await proofDependenciesReported;
+    // }
 
     return await compilation.GetAndReportExitCode();
   }

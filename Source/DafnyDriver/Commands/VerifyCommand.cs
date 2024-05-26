@@ -57,18 +57,18 @@ public static class VerifyCommand {
 
     var resolution = await compilation.Resolution;
 
-    if (resolution != null) {
-      Subject<CanVerifyResult> verificationResults = new();
-
-      ReportVerificationDiagnostics(compilation, verificationResults);
-      var verificationSummarized = ReportVerificationSummary(compilation, verificationResults);
-      var proofDependenciesReported = ReportProofDependencies(compilation, resolution, verificationResults);
-      var verificationResultsLogged = LogVerificationResults(compilation, resolution, verificationResults);
-      compilation.VerifyAllLazily(0).ToObservable().Subscribe(verificationResults);
-      await verificationSummarized;
-      await verificationResultsLogged;
-      await proofDependenciesReported;
-    }
+    // if (resolution != null) {
+    //   Subject<CanVerifyResult> verificationResults = new();
+    //
+    //   // ReportVerificationDiagnostics(compilation, verificationResults);
+    //   // var verificationSummarized = ReportVerificationSummary(compilation, verificationResults);
+    //   // var proofDependenciesReported = ReportProofDependencies(compilation, resolution, verificationResults);
+    //   // var verificationResultsLogged = LogVerificationResults(compilation, resolution, verificationResults);
+    //   // compilation.VerifyAllLazily(0).ToObservable().Subscribe(verificationResults);
+    //   // await verificationSummarized;
+    //   // await verificationResultsLogged;
+    //   // await proofDependenciesReported;
+    // }
 
     return await compilation.GetAndReportExitCode();
   }
@@ -160,65 +160,65 @@ public static class VerifyCommand {
   }
 
   public static void ReportVerificationDiagnostics(CliCompilation compilation, IObservable<CanVerifyResult> verificationResults) {
-    verificationResults.Subscribe(result => {
-      // We use an intermediate reporter so we can sort the diagnostics from all parts by token
-      var batchReporter = new BatchErrorReporter(compilation.Options);
-      foreach (var completed in result.Results) {
-        Compilation.ReportDiagnosticsInResult(compilation.Options, result.CanVerify.FullDafnyName, completed.Task.Token,
-          (uint)completed.Result.RunTime.TotalSeconds,
-          completed.Result, batchReporter);
-      }
-
-      foreach (var diagnostic in batchReporter.AllMessages.OrderBy(m => m.Token)) {
-        compilation.Compilation.Reporter.Message(diagnostic.Source, diagnostic.Level, diagnostic.ErrorId, diagnostic.Token,
-          diagnostic.Message);
-      }
-    });
+    // verificationResults.Subscribe(result => {
+    //   // We use an intermediate reporter so we can sort the diagnostics from all parts by token
+    //   var batchReporter = new BatchErrorReporter(compilation.Options);
+    //   foreach (var completed in result.Results) {
+    //     Compilation.ReportDiagnosticsInResult(compilation.Options, result.CanVerify.FullDafnyName, completed.Task.Token,
+    //       (uint)completed.Result.RunTime.TotalSeconds,
+    //       completed.Result, batchReporter);
+    //   }
+    //
+    //   foreach (var diagnostic in batchReporter.AllMessages.OrderBy(m => m.Token)) {
+    //     compilation.Compilation.Reporter.Message(diagnostic.Source, diagnostic.Level, diagnostic.ErrorId, diagnostic.Token,
+    //       diagnostic.Message);
+    //   }
+    // });
   }
 
 
   public static async Task LogVerificationResults(CliCompilation cliCompilation, ResolutionResult resolution,
     IObservable<CanVerifyResult> verificationResults) {
-    VerificationResultLogger? verificationResultLogger = null;
-    var proofDependencyManager = resolution.ResolvedProgram.ProofDependencyManager;
-    try {
-      verificationResultLogger = new VerificationResultLogger(cliCompilation.Options, proofDependencyManager);
-    } catch (ArgumentException e) {
-      cliCompilation.Compilation.Reporter.Error(MessageSource.Verifier, cliCompilation.Compilation.Project.StartingToken, e.Message);
-    }
-
-    verificationResults.Subscribe(result => verificationResultLogger?.Report(result),
-      e => { },
-      () => {
-      });
-    await verificationResults.WaitForComplete();
-    if (verificationResultLogger != null) {
-      await verificationResultLogger.Finish();
-    }
+    // VerificationResultLogger? verificationResultLogger = null;
+    // var proofDependencyManager = resolution.ResolvedProgram.ProofDependencyManager;
+    // try {
+    //   verificationResultLogger = new VerificationResultLogger(cliCompilation.Options, proofDependencyManager);
+    // } catch (ArgumentException e) {
+    //   cliCompilation.Compilation.Reporter.Error(MessageSource.Verifier, cliCompilation.Compilation.Project.StartingToken, e.Message);
+    // }
+    //
+    // verificationResults.Subscribe(result => verificationResultLogger?.Report(result),
+    //   e => { },
+    //   () => {
+    //   });
+    // await verificationResults.WaitForComplete();
+    // if (verificationResultLogger != null) {
+    //   await verificationResultLogger.Finish();
+    // }
   }
 
   public static async Task ReportProofDependencies(
     CliCompilation cliCompilation,
     ResolutionResult resolution,
     IObservable<CanVerifyResult> verificationResults) {
-    var usedDependencies = new HashSet<TrackedNodeComponent>();
-    var proofDependencyManager = resolution.ResolvedProgram.ProofDependencyManager;
-
-    verificationResults.Subscribe(result => {
-      ProofDependencyWarnings.ReportSuspiciousDependencies(cliCompilation.Options, result.Results,
-        resolution.ResolvedProgram.Reporter, resolution.ResolvedProgram.ProofDependencyManager);
-
-      foreach (var used in result.Results.SelectMany(part => part.Result.CoveredElements)) {
-        usedDependencies.Add(used);
-      }
-    }, e => { }, () => { });
-    await verificationResults.WaitForComplete();
-    var coverageReportDir = cliCompilation.Options.Get(CommonOptionBag.VerificationCoverageReport);
-    if (coverageReportDir != null) {
-      await new CoverageReporter(cliCompilation.Options).SerializeVerificationCoverageReport(
-        proofDependencyManager, resolution.ResolvedProgram,
-        usedDependencies,
-        coverageReportDir);
-    }
+    // var usedDependencies = new HashSet<TrackedNodeComponent>();
+    // var proofDependencyManager = resolution.ResolvedProgram.ProofDependencyManager;
+    //
+    // verificationResults.Subscribe(result => {
+    //   ProofDependencyWarnings.ReportSuspiciousDependencies(cliCompilation.Options, result.Results,
+    //     resolution.ResolvedProgram.Reporter, resolution.ResolvedProgram.ProofDependencyManager);
+    //
+    //   foreach (var used in result.Results.SelectMany(part => part.Result.CoveredElements)) {
+    //     usedDependencies.Add(used);
+    //   }
+    // }, e => { }, () => { });
+    // await verificationResults.WaitForComplete();
+    // var coverageReportDir = cliCompilation.Options.Get(CommonOptionBag.VerificationCoverageReport);
+    // if (coverageReportDir != null) {
+    //   await new CoverageReporter(cliCompilation.Options).SerializeVerificationCoverageReport(
+    //     proofDependencyManager, resolution.ResolvedProgram,
+    //     usedDependencies,
+    //     coverageReportDir);
+    // }
   }
 }
