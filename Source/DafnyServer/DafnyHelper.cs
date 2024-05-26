@@ -36,10 +36,9 @@ namespace Microsoft.Dafny {
       this.source = source;
     }
 
-    public Task<bool> Verify() {
-      // ServerUtils.ApplyArgs(args, options);
-      // return await Parse() && Resolve() && Translate() && Boogie();
-      return Task.FromResult(true);
+    public async Task<bool> Verify() {
+      ServerUtils.ApplyArgs(args, options);
+      return await Parse() && Resolve() && Translate() && Boogie();
     }
 
     private async Task<bool> Parse() {
@@ -58,17 +57,18 @@ namespace Microsoft.Dafny {
     }
 
     private bool Resolve() {
-//       var resolver = new ProgramResolver(dafnyProgram);
-// #pragma warning disable VSTHRD002
-//       resolver.Resolve(CancellationToken.None).Wait();
-// #pragma warning restore VSTHRD002
-//       return reporter.Count(ErrorLevel.Error) == 0;
-      return true;
+      var resolver = new ProgramResolver(dafnyProgram);
+#pragma warning disable VSTHRD002
+      resolver.Resolve(CancellationToken.None).Wait();
+#pragma warning restore VSTHRD002
+      return reporter.Count(ErrorLevel.Error) == 0;
     }
 
     private bool Translate() {
       // boogiePrograms = BoogieGenerator.Translate(dafnyProgram, reporter,
       //     new BoogieGenerator.TranslatorFlags(options) { InsertChecksums = true, UniqueIdPrefix = fname }).ToList(); // FIXME how are translation errors reported?
+      
+      // [Compiler testing modification] Trivially return true for boogie translation
       return true;
     }
 
@@ -91,6 +91,8 @@ namespace Microsoft.Dafny {
 //       }
 //
 //       return false;
+
+      // [Compiler testing modification] Trivially return true for boogie translation
       return true;
     }
 
@@ -100,6 +102,8 @@ namespace Microsoft.Dafny {
       //   isVerified = isVerified && BoogieOnce(boogieProgram.Item1, boogieProgram.Item2);
       // }
       // return isVerified;
+      
+      // [Compiler testing modification] Trivially return true for boogie translation
       return true;
     }
 
@@ -133,24 +137,24 @@ namespace Microsoft.Dafny {
     }
 
     private void RemoveExistingModel() {
-      // if (File.Exists(counterExampleProvider.ModelBvd)) {
-      //   File.Delete(counterExampleProvider.ModelBvd);
-      // }
+      if (File.Exists(counterExampleProvider.ModelBvd)) {
+        File.Delete(counterExampleProvider.ModelBvd);
+      }
     }
 
     public async Task DotGraph() {
-      // ServerUtils.ApplyArgs(args, options);
-      //
-      // if (await Parse() && Resolve() && Translate()) {
-      //   foreach (var boogieProgram in boogiePrograms) {
-      //     BoogieOnce(boogieProgram.Item1, boogieProgram.Item2);
-      //
-      //     foreach (var impl in boogieProgram.Item2.Implementations) {
-      //       await using var sw = new StreamWriter(fname + impl.Name + ".dot");
-      //       await sw.WriteAsync(boogieProgram.Item2.ProcessLoops(engine.Options, impl).ToDot());
-      //     }
-      //   }
-      // }
+      ServerUtils.ApplyArgs(args, options);
+      
+      if (await Parse() && Resolve() && Translate()) {
+        foreach (var boogieProgram in boogiePrograms) {
+          BoogieOnce(boogieProgram.Item1, boogieProgram.Item2);
+      
+          foreach (var impl in boogieProgram.Item2.Implementations) {
+            await using var sw = new StreamWriter(fname + impl.Name + ".dot");
+            await sw.WriteAsync(boogieProgram.Item2.ProcessLoops(engine.Options, impl).ToDot());
+          }
+        }
+      }
     }
 
     private static string ConvertToJson<T>(T data) {

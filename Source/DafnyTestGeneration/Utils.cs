@@ -31,9 +31,9 @@ namespace DafnyTestGeneration {
         () => {
           var oldPrintInstrumented = program.Reporter.Options.PrintInstrumented;
           program.Reporter.Options.PrintInstrumented = true;
-          ret = BoogieGenerator
-            .Translate(program, program.Reporter)
-            .ToList().ConvertAll(tuple => tuple.Item2);
+          // ret = BoogieGenerator
+          //   .Translate(program, program.Reporter)
+          //   .ToList().ConvertAll(tuple => tuple.Item2);
           program.Reporter.Options.PrintInstrumented = oldPrintInstrumented;
         },
         0x10000000); // 256MB stack size to prevent stack overflow

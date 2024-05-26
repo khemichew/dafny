@@ -253,61 +253,60 @@ public class CliCompilation {
     //
     //   canVerifyResults.Remove(canVerify); // Free memory
     // }
+    
+    // [Compiler testing modification] trivially return empty list of canverifyresults
     yield break;
   }
 
-  public static string DescribeOutcome(VcOutcome outcome) {
-    return outcome switch {
-      VcOutcome.Correct => "verified successfully",
-      VcOutcome.Errors => "could not prove all assertions",
-      VcOutcome.Inconclusive => "was inconclusive",
-      VcOutcome.TimedOut => "timed out",
-      VcOutcome.OutOfResource => "ran out of resources",
-      VcOutcome.OutOfMemory => "ran out of memory",
-      VcOutcome.SolverException => "ran into a solver exception",
-      _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
-    };
-  }
-
-  private List<ICanVerify> FilterCanVerifies(List<ICanVerify> canVerifies, out int? line) {
-    // var symbolFilter = Options.Get(VerifyCommand.FilterSymbol);
-    // if (symbolFilter != null) {
-    //   canVerifies = canVerifies.Where(canVerify => canVerify.FullDafnyName.Contains(symbolFilter)).ToList();
-    // }
-    //
-    // var filterPosition = Options.Get(VerifyCommand.FilterPosition);
-    // if (filterPosition == null) {
-    //   line = null;
-    //   return canVerifies;
-    // }
-    //
-    // var regex = new Regex(@"(.*)(?::(\d+))?", RegexOptions.RightToLeft);
-    // var result = regex.Match(filterPosition);
-    // if (result.Length != filterPosition.Length || !result.Success) {
-    //   Compilation.Reporter.Error(MessageSource.Project, Token.Cli, "Could not parse value passed to --filter-position");
-    //   line = null;
-    //   return new List<ICanVerify>();
-    // }
-    // var filePart = result.Groups[1].Value;
-    // string? linePart = result.Groups.Count > 2 ? result.Groups[2].Value : null;
-    // var fileFiltered = canVerifies.Where(c => c.Tok.Uri.ToString().EndsWith(filePart)).ToList();
-    // if (string.IsNullOrEmpty(linePart)) {
-    //   line = null;
-    //   return fileFiltered;
-    // }
-    //
-    // var parsedLine = int.Parse(linePart);
-    // line = parsedLine;
-    // return fileFiltered.Where(c =>
-    //     c.RangeToken.StartToken.line <= parsedLine && parsedLine <= c.RangeToken.EndToken.line).ToList();
-    line = null;
-    return canVerifies;
-  }
-
-  private bool KeepVerificationTask(IVerificationTask task, int line) {
-    // return task.ScopeToken.line == line || task.Token.line == line;
-    return false;
-  }
+  // public static string DescribeOutcome(VcOutcome outcome) {
+  //   return outcome switch {
+  //     VcOutcome.Correct => "verified successfully",
+  //     VcOutcome.Errors => "could not prove all assertions",
+  //     VcOutcome.Inconclusive => "was inconclusive",
+  //     VcOutcome.TimedOut => "timed out",
+  //     VcOutcome.OutOfResource => "ran out of resources",
+  //     VcOutcome.OutOfMemory => "ran out of memory",
+  //     VcOutcome.SolverException => "ran into a solver exception",
+  //     _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null)
+  //   };
+  // }
+  //
+  // private List<ICanVerify> FilterCanVerifies(List<ICanVerify> canVerifies, out int? line) {
+  //   var symbolFilter = Options.Get(VerifyCommand.FilterSymbol);
+  //   if (symbolFilter != null) {
+  //     canVerifies = canVerifies.Where(canVerify => canVerify.FullDafnyName.Contains(symbolFilter)).ToList();
+  //   }
+  //   
+  //   var filterPosition = Options.Get(VerifyCommand.FilterPosition);
+  //   if (filterPosition == null) {
+  //     line = null;
+  //     return canVerifies;
+  //   }
+  //   
+  //   var regex = new Regex(@"(.*)(?::(\d+))?", RegexOptions.RightToLeft);
+  //   var result = regex.Match(filterPosition);
+  //   if (result.Length != filterPosition.Length || !result.Success) {
+  //     Compilation.Reporter.Error(MessageSource.Project, Token.Cli, "Could not parse value passed to --filter-position");
+  //     line = null;
+  //     return new List<ICanVerify>();
+  //   }
+  //   var filePart = result.Groups[1].Value;
+  //   string? linePart = result.Groups.Count > 2 ? result.Groups[2].Value : null;
+  //   var fileFiltered = canVerifies.Where(c => c.Tok.Uri.ToString().EndsWith(filePart)).ToList();
+  //   if (string.IsNullOrEmpty(linePart)) {
+  //     line = null;
+  //     return fileFiltered;
+  //   }
+  //   
+  //   var parsedLine = int.Parse(linePart);
+  //   line = parsedLine;
+  //   return fileFiltered.Where(c =>
+  //       c.RangeToken.StartToken.line <= parsedLine && parsedLine <= c.RangeToken.EndToken.line).ToList();
+  // }
+  //
+  // private bool KeepVerificationTask(IVerificationTask task, int line) {
+  //   return task.ScopeToken.line == line || task.Token.line == line;
+  // }
 }
 
 record VerificationStatistics {
