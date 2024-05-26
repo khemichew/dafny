@@ -49,7 +49,10 @@ public static class VerifyCommand {
 
   public static async Task<int> HandleVerification(DafnyOptions options) {
     if (options.Get(CommonOptionBag.VerificationCoverageReport) != null) {
-      options.TrackVerificationCoverage = true;
+      // options.TrackVerificationCoverage = true;
+      
+      // [Compiler testing] disable verification coverage tracking
+      options.TrackVerificationCoverage = false;
     }
 
     var compilation = CliCompilation.Create(options);
