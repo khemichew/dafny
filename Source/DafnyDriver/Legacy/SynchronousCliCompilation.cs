@@ -283,15 +283,16 @@ namespace Microsoft.Dafny {
           && options.DafnyVerify) {
 
         dafnyProgram.ProofDependencyManager = depManager;
-        // var boogiePrograms =
-        //   await DafnyMain.LargeStackFactory.StartNew(() => Translate(engine.Options, dafnyProgram).ToList());
         
         // [Compiler testing modification] trivially return empty list of programs
         var boogiePrograms = new List<Tuple<string, Bpl.Program>>();
-
-        string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
-        var (verified, outcome, moduleStats) =
-          await BoogieAsync(dafnyProgram.Reporter, options, baseName, boogiePrograms, programId);
+        
+        // var boogiePrograms =
+        //   await DafnyMain.LargeStackFactory.StartNew(() => Translate(engine.Options, dafnyProgram).ToList());
+        
+        // string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
+        // var (verified, outcome, moduleStats) =
+        //   await BoogieAsync(dafnyProgram.Reporter, options, baseName, boogiePrograms, programId);
 
         if (options.TrackVerificationCoverage) {
           ProofDependencyWarnings.WarnAboutSuspiciousDependencies(options, dafnyProgram.Reporter, depManager);
@@ -324,9 +325,9 @@ namespace Microsoft.Dafny {
         }
 
         var failBecauseOfDiagnostics = dafnyProgram.Reporter.FailCompilationMessage;
-        if (!verified) {
-          exitValue = ExitValue.VERIFICATION_ERROR;
-        } else
+        // if (!verified) {
+        //   exitValue = ExitValue.VERIFICATION_ERROR;
+        // } else
         if (!compiled) {
           exitValue = ExitValue.COMPILE_ERROR;
         } else if (failBecauseOfDiagnostics != null) {
