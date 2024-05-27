@@ -405,7 +405,7 @@ namespace Microsoft.Dafny {
         IEnumerable<Tuple<string, Bpl.Program>> boogiePrograms, string programId) {
       var concurrentModuleStats = new ConcurrentDictionary<string, PipelineStatistics>();
       var writerManager = new ConcurrentToSequentialWriteManager(options.OutputWriter);
-    
+      
       if (options.Verify || options.Get(BoogieOptionBag.HiddenNoVerify)) {
         var before = errorReporter.ErrorCount;
         options.ProcessSolverOptions(errorReporter, Token.Cli);
@@ -431,7 +431,7 @@ namespace Microsoft.Dafny {
       await options.OutputWriter.FlushAsync();
       var outcome = moduleTasks.Select(t => t.Result.Outcome)
         .Aggregate(PipelineOutcome.VerificationCompleted, MergeOutcomes);
-    
+      
       var isVerified = moduleTasks.Select(t =>
         DafnyMain.IsBoogieVerified(t.Result.Outcome, t.Result.Stats)).All(x => x);
       return (isVerified, outcome, concurrentModuleStats);
@@ -459,7 +459,7 @@ namespace Microsoft.Dafny {
         TimeSpan ts = watch.Elapsed;
         string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
         options.Printer.AdvisoryWriteLine(output, "Elapsed time: {0}", elapsedTime);
-        WriteTrailer(options, output, result.Statistics);
+        // WriteTrailer(options, output, result.Statistics);
       }
     
       return result;
@@ -521,7 +521,7 @@ namespace Microsoft.Dafny {
         statSum.CachedVerifiedCount += stats.Value.CachedVerifiedCount;
         statSum.InconclusiveCount += stats.Value.InconclusiveCount;
       }
-      WriteTrailer(options, output, statSum);
+      // WriteTrailer(options, output, statSum);
     }
 
 
@@ -532,7 +532,7 @@ namespace Microsoft.Dafny {
       bool compiled = true;
       switch (oc) {
         case PipelineOutcome.VerificationCompleted:
-          WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
+          // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
           if ((options.Compile && verified && !options.UserConstrainedProcsToCheck) || options.ForceCompile) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, true);
           } else if ((2 <= options.SpillTargetCode && verified && !options.UserConstrainedProcsToCheck) || 3 <= options.SpillTargetCode) {
@@ -540,7 +540,7 @@ namespace Microsoft.Dafny {
           }
           break;
         case PipelineOutcome.Done:
-          WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
+          // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
           if (options.ForceCompile || 3 <= options.SpillTargetCode) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, options.ForceCompile);
           }
