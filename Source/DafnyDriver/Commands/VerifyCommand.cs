@@ -121,16 +121,16 @@ public static class VerifyCommand {
 
   private static async Task WriteTrailer(CliCompilation cliCompilation,
     VerificationStatistics statistics) {
-    // if (cliCompilation.Options.Verbosity <= CoreOptions.VerbosityLevel.Quiet) {
-    //   return;
-    // }
-    //
-    // if (!cliCompilation.DidVerification) {
-    //   return;
-    // }
-    //
-    // var output = cliCompilation.Options.OutputWriter;
-    //
+    if (cliCompilation.Options.Verbosity <= CoreOptions.VerbosityLevel.Quiet) {
+      return;
+    }
+    
+    if (!cliCompilation.DidVerification) {
+      return;
+    }
+    
+    var output = cliCompilation.Options.OutputWriter;
+    
     // await output.WriteLineAsync();
     //
     // if (cliCompilation.VerifiedAssertions) {
@@ -158,8 +158,8 @@ public static class VerifyCommand {
     //   await output.WriteAsync($", {statistics.SolverExceptionCount} solver exceptions");
     // }
     //
-    // await output.WriteLineAsync();
-    // await output.FlushAsync();
+    await output.WriteLineAsync();
+    await output.FlushAsync();
   }
 
   public static void ReportVerificationDiagnostics(CliCompilation compilation, IObservable<CanVerifyResult> verificationResults) {

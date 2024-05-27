@@ -533,6 +533,9 @@ namespace Microsoft.Dafny {
       switch (oc) {
         case PipelineOutcome.VerificationCompleted:
           // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
+          
+          // [Compiler testing] replace with newline to respect the original semantics
+          Console.WriteLine();
           if ((options.Compile && verified && !options.UserConstrainedProcsToCheck) || options.ForceCompile) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, true);
           } else if ((2 <= options.SpillTargetCode && verified && !options.UserConstrainedProcsToCheck) || 3 <= options.SpillTargetCode) {
@@ -541,6 +544,9 @@ namespace Microsoft.Dafny {
           break;
         case PipelineOutcome.Done:
           // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
+          
+          // [Compiler testing] replace with newline to respect the original semantics
+          Console.WriteLine();
           if (options.ForceCompile || 3 <= options.SpillTargetCode) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, options.ForceCompile);
           }
