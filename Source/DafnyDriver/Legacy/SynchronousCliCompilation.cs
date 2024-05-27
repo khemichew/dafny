@@ -290,9 +290,9 @@ namespace Microsoft.Dafny {
         // var boogiePrograms =
         //   await DafnyMain.LargeStackFactory.StartNew(() => Translate(engine.Options, dafnyProgram).ToList());
         
-        // string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
-        // var (verified, outcome, moduleStats) =
-        //   await BoogieAsync(dafnyProgram.Reporter, options, baseName, boogiePrograms, programId);
+        string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
+        var (verified, outcome, moduleStats) =
+          await BoogieAsync(dafnyProgram.Reporter, options, baseName, boogiePrograms, programId);
 
         if (options.TrackVerificationCoverage) {
           ProofDependencyWarnings.WarnAboutSuspiciousDependencies(options, dafnyProgram.Reporter, depManager);
@@ -413,21 +413,17 @@ namespace Microsoft.Dafny {
           return (false, PipelineOutcome.FatalError, concurrentModuleStats);
         }
       }
-      
-      // [Compiler testing modification] trivially return empty tasks
-      var moduleTasks =
-        new List<Task<(PipelineOutcome Outcome, PipelineStatistics Stats)>>();
     
-      // var moduleTasks = boogiePrograms.Select(async program => {
-      //   await using var moduleWriter = writerManager.AppendWriter();
-      //   // ReSharper disable once AccessToDisposedClosure
-      //   var result = await Task.Run(() =>
-      //     BoogieOnceWithTimerAsync(errorReporter, moduleWriter, options, baseName, programId, program.Item1, program.Item2));
-      //   concurrentModuleStats.TryAdd(program.Item1, result.Stats);
-      //   return result;
-      // }).ToList();
+      var moduleTasks = boogiePrograms.Select(async program => {
+        await using var moduleWriter = writerManager.AppendWriter();
+        // ReSharper disable once AccessToDisposedClosure
+        var result = await Task.Run(() =>
+          BoogieOnceWithTimerAsync(errorReporter, moduleWriter, options, baseName, programId, program.Item1, program.Item2));
+        concurrentModuleStats.TryAdd(program.Item1, result.Stats);
+        return result;
+      }).ToList();
       
-      // await Task.WhenAll(moduleTasks);
+      await Task.WhenAll(moduleTasks);
       await options.OutputWriter.FlushAsync();
       var outcome = moduleTasks.Select(t => t.Result.Outcome)
         .Aggregate(PipelineOutcome.VerificationCompleted, MergeOutcomes);
@@ -450,8 +446,8 @@ namespace Microsoft.Dafny {
         options.Printer.AdvisoryWriteLine(output, "For module: {0}", moduleName);
       }
     
-      var result =
-        await DafnyMain.BoogieOnce(errorReporter, options, output, engine, baseName, moduleName, program, programId);
+      // var result =
+      //   await DafnyMain.BoogieOnce(errorReporter, options, output, engine, baseName, moduleName, program, programId);
     
       watch.Stop();
     
@@ -460,9 +456,14 @@ namespace Microsoft.Dafny {
         string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
         options.Printer.AdvisoryWriteLine(output, "Elapsed time: {0}", elapsedTime);
         // WriteTrailer(options, output, result.Statistics);
+        
+        // [Compiler testing] replace with newline to respect the original semantics
+        await output.WriteLineAsync();
+        await output.FlushAsync();
       }
-    
-      return result;
+
+      // [Compiler testing] return trivial verification complete result
+      return (PipelineOutcome.VerificationCompleted, new PipelineStatistics());
     }
 
     private static PipelineOutcome MergeOutcomes(PipelineOutcome first, PipelineOutcome second) {
@@ -535,7 +536,9 @@ namespace Microsoft.Dafny {
           // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
           
           // [Compiler testing] replace with newline to respect the original semantics
-          Console.WriteLine();
+          await options.OutputWriter.WriteLineAsync();
+          await options.OutputWriter.FlushAsync();
+          
           if ((options.Compile && verified && !options.UserConstrainedProcsToCheck) || options.ForceCompile) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, true);
           } else if ((2 <= options.SpillTargetCode && verified && !options.UserConstrainedProcsToCheck) || 3 <= options.SpillTargetCode) {
@@ -546,7 +549,9 @@ namespace Microsoft.Dafny {
           // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
           
           // [Compiler testing] replace with newline to respect the original semantics
-          Console.WriteLine();
+          await options.OutputWriter.WriteLineAsync();
+          await options.OutputWriter.FlushAsync();
+          
           if (options.ForceCompile || 3 <= options.SpillTargetCode) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, options.ForceCompile);
           }

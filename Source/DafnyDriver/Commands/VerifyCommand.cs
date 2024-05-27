@@ -49,10 +49,7 @@ public static class VerifyCommand {
 
   public static async Task<int> HandleVerification(DafnyOptions options) {
     if (options.Get(CommonOptionBag.VerificationCoverageReport) != null) {
-      // options.TrackVerificationCoverage = true;
-      
-      // [Compiler testing] disable verification coverage tracking
-      options.TrackVerificationCoverage = false;
+      options.TrackVerificationCoverage = true;
     }
 
     var compilation = CliCompilation.Create(options);
@@ -60,18 +57,18 @@ public static class VerifyCommand {
 
     var resolution = await compilation.Resolution;
 
-    // if (resolution != null) {
-    //   Subject<CanVerifyResult> verificationResults = new();
-    //
-    //   // ReportVerificationDiagnostics(compilation, verificationResults);
-    //   // var verificationSummarized = ReportVerificationSummary(compilation, verificationResults);
-    //   // var proofDependenciesReported = ReportProofDependencies(compilation, resolution, verificationResults);
-    //   // var verificationResultsLogged = LogVerificationResults(compilation, resolution, verificationResults);
-    //   // compilation.VerifyAllLazily(0).ToObservable().Subscribe(verificationResults);
-    //   // await verificationSummarized;
-    //   // await verificationResultsLogged;
-    //   // await proofDependenciesReported;
-    // }
+    if (resolution != null) {
+      Subject<CanVerifyResult> verificationResults = new();
+    
+      // ReportVerificationDiagnostics(compilation, verificationResults);
+      var verificationSummarized = ReportVerificationSummary(compilation, verificationResults);
+      // var proofDependenciesReported = ReportProofDependencies(compilation, resolution, verificationResults);
+      // var verificationResultsLogged = LogVerificationResults(compilation, resolution, verificationResults);
+      // compilation.VerifyAllLazily(0).ToObservable().Subscribe(verificationResults);
+      // await verificationSummarized;
+      // await verificationResultsLogged;
+      // await proofDependenciesReported;
+    }
 
     return await compilation.GetAndReportExitCode();
   }
@@ -80,42 +77,42 @@ public static class VerifyCommand {
     IObservable<CanVerifyResult> verificationResults) {
     var statistics = new VerificationStatistics();
 
-    verificationResults.Subscribe(result => {
-      foreach (var taskResult in result.Results) {
-        var runResult = taskResult.Result;
-
-        switch (runResult.Outcome) {
-          case SolverOutcome.Valid:
-          case SolverOutcome.Bounded:
-            Interlocked.Increment(ref statistics.VerifiedSymbols);
-            Interlocked.Add(ref statistics.VerifiedAssertions, runResult.Asserts.Count);
-            break;
-          case SolverOutcome.Invalid:
-            var total = runResult.Asserts.Count;
-            var errors = runResult.CounterExamples.Count;
-            Interlocked.Add(ref statistics.VerifiedAssertions, total - errors);
-            Interlocked.Add(ref statistics.ErrorCount, errors);
-            break;
-          case SolverOutcome.TimeOut:
-            Interlocked.Increment(ref statistics.TimeoutCount);
-            break;
-          case SolverOutcome.OutOfMemory:
-            Interlocked.Increment(ref statistics.OutOfMemoryCount);
-            break;
-          case SolverOutcome.OutOfResource:
-            Interlocked.Increment(ref statistics.OutOfResourceCount);
-            break;
-          case SolverOutcome.Undetermined:
-            Interlocked.Increment(ref statistics.InconclusiveCount);
-            break;
-          default:
-            throw new ArgumentOutOfRangeException();
-        }
-      }
-    }, e => {
-      Interlocked.Increment(ref statistics.SolverExceptionCount);
-    });
-    await verificationResults.WaitForComplete();
+    // verificationResults.Subscribe(result => {
+    //   foreach (var taskResult in result.Results) {
+    //     var runResult = taskResult.Result;
+    //
+    //     switch (runResult.Outcome) {
+    //       case SolverOutcome.Valid:
+    //       case SolverOutcome.Bounded:
+    //         Interlocked.Increment(ref statistics.VerifiedSymbols);
+    //         Interlocked.Add(ref statistics.VerifiedAssertions, runResult.Asserts.Count);
+    //         break;
+    //       case SolverOutcome.Invalid:
+    //         var total = runResult.Asserts.Count;
+    //         var errors = runResult.CounterExamples.Count;
+    //         Interlocked.Add(ref statistics.VerifiedAssertions, total - errors);
+    //         Interlocked.Add(ref statistics.ErrorCount, errors);
+    //         break;
+    //       case SolverOutcome.TimeOut:
+    //         Interlocked.Increment(ref statistics.TimeoutCount);
+    //         break;
+    //       case SolverOutcome.OutOfMemory:
+    //         Interlocked.Increment(ref statistics.OutOfMemoryCount);
+    //         break;
+    //       case SolverOutcome.OutOfResource:
+    //         Interlocked.Increment(ref statistics.OutOfResourceCount);
+    //         break;
+    //       case SolverOutcome.Undetermined:
+    //         Interlocked.Increment(ref statistics.InconclusiveCount);
+    //         break;
+    //       default:
+    //         throw new ArgumentOutOfRangeException();
+    //     }
+    //   }
+    // }, e => {
+    //   Interlocked.Increment(ref statistics.SolverExceptionCount);
+    // });
+    // await verificationResults.WaitForComplete();
     await WriteTrailer(cliCompilation, statistics);
   }
 
