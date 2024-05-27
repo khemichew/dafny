@@ -57,25 +57,25 @@ public static class VerifyCommand {
 
     var resolution = await compilation.Resolution;
 
-    if (resolution != null) {
-      Subject<CanVerifyResult> verificationResults = new();
+    // if (resolution != null) {
+    //   Subject<CanVerifyResult> verificationResults = new();
     
       // ReportVerificationDiagnostics(compilation, verificationResults);
-      var verificationSummarized = ReportVerificationSummary(compilation, verificationResults);
+      // var verificationSummarized = ReportVerificationSummary(compilation, verificationResults);
       // var proofDependenciesReported = ReportProofDependencies(compilation, resolution, verificationResults);
       // var verificationResultsLogged = LogVerificationResults(compilation, resolution, verificationResults);
       // compilation.VerifyAllLazily(0).ToObservable().Subscribe(verificationResults);
       // await verificationSummarized;
       // await verificationResultsLogged;
       // await proofDependenciesReported;
-    }
+    // }
 
     return await compilation.GetAndReportExitCode();
   }
   public static async Task ReportVerificationSummary(
     CliCompilation cliCompilation,
     IObservable<CanVerifyResult> verificationResults) {
-    var statistics = new VerificationStatistics();
+    // var statistics = new VerificationStatistics();
 
     // verificationResults.Subscribe(result => {
     //   foreach (var taskResult in result.Results) {
@@ -113,7 +113,7 @@ public static class VerifyCommand {
     //   Interlocked.Increment(ref statistics.SolverExceptionCount);
     // });
     // await verificationResults.WaitForComplete();
-    await WriteTrailer(cliCompilation, statistics);
+    // await WriteTrailer(cliCompilation, statistics);
   }
 
   private static async Task WriteTrailer(CliCompilation cliCompilation,
@@ -155,8 +155,8 @@ public static class VerifyCommand {
     //   await output.WriteAsync($", {statistics.SolverExceptionCount} solver exceptions");
     // }
     //
-    await output.WriteLineAsync();
-    await output.FlushAsync();
+    // await output.WriteLineAsync();
+    // await output.FlushAsync();
   }
 
   public static void ReportVerificationDiagnostics(CliCompilation compilation, IObservable<CanVerifyResult> verificationResults) {

@@ -290,9 +290,9 @@ namespace Microsoft.Dafny {
         // var boogiePrograms =
         //   await DafnyMain.LargeStackFactory.StartNew(() => Translate(engine.Options, dafnyProgram).ToList());
         
-        string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
-        var (verified, outcome, moduleStats) =
-          await BoogieAsync(dafnyProgram.Reporter, options, baseName, boogiePrograms, programId);
+        // string baseName = cce.NonNull(Path.GetFileName(dafnyFileNames[^1]));
+        // var (verified, outcome, moduleStats) =
+        //   await BoogieAsync(dafnyProgram.Reporter, options, baseName, boogiePrograms, programId);
 
         if (options.TrackVerificationCoverage) {
           ProofDependencyWarnings.WarnAboutSuspiciousDependencies(options, dafnyProgram.Reporter, depManager);
@@ -413,17 +413,20 @@ namespace Microsoft.Dafny {
           return (false, PipelineOutcome.FatalError, concurrentModuleStats);
         }
       }
+
+      var moduleTasks =
+        new List<Task<(PipelineOutcome Outcome, PipelineStatistics Stats)>>();
     
-      var moduleTasks = boogiePrograms.Select(async program => {
-        await using var moduleWriter = writerManager.AppendWriter();
-        // ReSharper disable once AccessToDisposedClosure
-        var result = await Task.Run(() =>
-          BoogieOnceWithTimerAsync(errorReporter, moduleWriter, options, baseName, programId, program.Item1, program.Item2));
-        concurrentModuleStats.TryAdd(program.Item1, result.Stats);
-        return result;
-      }).ToList();
+      // var moduleTasks = boogiePrograms.Select(async program => {
+      //   await using var moduleWriter = writerManager.AppendWriter();
+      //   // ReSharper disable once AccessToDisposedClosure
+      //   var result = await Task.Run(() =>
+      //     BoogieOnceWithTimerAsync(errorReporter, moduleWriter, options, baseName, programId, program.Item1, program.Item2));
+      //   concurrentModuleStats.TryAdd(program.Item1, result.Stats);
+      //   return result;
+      // }).ToList();
       
-      await Task.WhenAll(moduleTasks);
+      // await Task.WhenAll(moduleTasks);
       await options.OutputWriter.FlushAsync();
       var outcome = moduleTasks.Select(t => t.Result.Outcome)
         .Aggregate(PipelineOutcome.VerificationCompleted, MergeOutcomes);
@@ -534,11 +537,6 @@ namespace Microsoft.Dafny {
       switch (oc) {
         case PipelineOutcome.VerificationCompleted:
           // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
-          
-          // [Compiler testing] replace with newline to respect the original semantics
-          await options.OutputWriter.WriteLineAsync();
-          await options.OutputWriter.FlushAsync();
-          
           if ((options.Compile && verified && !options.UserConstrainedProcsToCheck) || options.ForceCompile) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, true);
           } else if ((2 <= options.SpillTargetCode && verified && !options.UserConstrainedProcsToCheck) || 3 <= options.SpillTargetCode) {
@@ -547,11 +545,6 @@ namespace Microsoft.Dafny {
           break;
         case PipelineOutcome.Done:
           // WriteProgramVerificationSummary(options, options.OutputWriter, moduleStats);
-          
-          // [Compiler testing] replace with newline to respect the original semantics
-          await options.OutputWriter.WriteLineAsync();
-          await options.OutputWriter.FlushAsync();
-          
           if (options.ForceCompile || 3 <= options.SpillTargetCode) {
             compiled = await CompileDafnyProgram(dafnyProgram, resultFileName, otherFileNames, options.ForceCompile);
           }
