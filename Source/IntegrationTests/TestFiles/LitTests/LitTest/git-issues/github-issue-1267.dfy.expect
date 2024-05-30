@@ -6,5 +6,3 @@ method Test()
   var tuple1 := (10, 300);
   assert tuple0 == tuple1;
 }
-
-Dafny program verifier finished with 1 verified, 0 errors

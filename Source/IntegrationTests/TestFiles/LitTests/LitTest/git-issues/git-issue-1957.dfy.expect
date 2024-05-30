@@ -5,5 +5,3 @@ git-issue-1957.dfy(5,20): Info: autocontracts:
    ensures Valid() ==> this in Repr
 git-issue-1957.dfy(5,20): Info: autocontracts:
    this in Repr && null !in Repr
-
-Dafny program verifier finished with 1 verified, 0 errors

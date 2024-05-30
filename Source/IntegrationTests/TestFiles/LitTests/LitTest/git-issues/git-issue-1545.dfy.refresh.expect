@@ -20,5 +20,3 @@ git-issue-1545.dfy(62,11): Warning: Could not find a trigger for this quantifier
 git-issue-1545.dfy(17,11): Error: assertion might not hold
 git-issue-1545.dfy(19,11): Error: assertion might not hold
 git-issue-1545.dfy(60,11): Error: assertion might not hold
-
-Dafny program verifier finished with 5 verified, 3 errors

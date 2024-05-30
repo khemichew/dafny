@@ -141,8 +141,6 @@ git-issue-663.dfy(344,6): Warning: assume statement has no {:axiom} annotation
 git-issue-663.dfy(221,11): Warning: assume statement has no {:axiom} annotation
 git-issue-663.dfy(225,2): Warning: assume statement has no {:axiom} annotation
 git-issue-663.dfy(232,11): Warning: assume statement has no {:axiom} annotation
-
-Dafny program verifier finished with 23 verified, 0 errors
 git-issue-663.dfy(187,7): Error: Method _module._default.SpecificationOfCompiledMethodWithoutBody has no body so it cannot be compiled
 git-issue-663.dfy(199,9): Error: Function _module._default.SpecificationOfCompiledFunctionWithoutBody has no body so it cannot be compiled
 Translation was aborted because errors were found

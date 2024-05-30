@@ -15,5 +15,3 @@ git-issue-276c.dfy(21,10): Info: newtype bd resolves as {:nativeType "byte"} (de
 git-issue-276c.dfy(22,10): Info: newtype be resolves as {:nativeType "byte"} (detected range: 0 .. 40)
 git-issue-276c.dfy(23,10): Info: newtype bf resolves as {:nativeType "byte"} (detected range: 0 .. 30)
 git-issue-276c.dfy(24,10): Info: newtype bg resolves as {:nativeType "byte"} (detected range: 0 .. 30)
-
-Dafny program verifier finished with 18 verified, 0 errors

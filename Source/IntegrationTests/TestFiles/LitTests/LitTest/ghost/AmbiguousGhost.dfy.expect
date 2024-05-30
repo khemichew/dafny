@@ -17,5 +17,3 @@ method M<b, c>(d: int)
   u := F(a<(b, (ghost b, ghost b)), c>(d));
   u := F(a<(b, ((ghost b, b), ghost b)), c>(d));
 }
-
-Dafny program verifier finished with 0 verified, 0 errors

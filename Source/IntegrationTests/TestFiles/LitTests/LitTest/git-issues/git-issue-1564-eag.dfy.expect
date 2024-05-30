@@ -23,5 +23,3 @@ predicate R0()
 } by method {
   return true;
 }
-
-Dafny program verifier finished with 2 verified, 0 errors

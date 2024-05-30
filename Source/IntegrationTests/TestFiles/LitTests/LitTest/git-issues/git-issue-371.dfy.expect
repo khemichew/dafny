@@ -45,5 +45,3 @@ module A {
     var zh: MA.Inner.T17
   }
 }
-
-Dafny program verifier finished with 2 verified, 0 errors

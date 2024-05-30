@@ -13,5 +13,3 @@ useless-triggers-are-removed.dfy(23,11): Info: Selected triggers:
    {g(f(x)), g(f(y))} (more specific than {g(f(x)), f(y)}, {g(f(y)), f(x)}, {f(y), f(x)})
    {g(f(x)), f(y)} (more specific than {f(y), f(x)})
    {g(f(y)), f(x)} (more specific than {f(y), f(x)})
-
-Dafny program verifier finished with 0 verified, 0 errors

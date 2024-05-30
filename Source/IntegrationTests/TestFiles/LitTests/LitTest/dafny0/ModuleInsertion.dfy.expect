@@ -104,8 +104,6 @@ module U.V {
 module U.V.W {
   const x1 := 12 * X.x0
 }
-
-Dafny program verifier did not attempt verification
 // ModuleInsertion.dfy
 
 /*
@@ -428,8 +426,6 @@ module U {
     }
   }
 }
-
-Dafny program verifier finished with 1 verified, 0 errors
 6 1 5 3
 20 17 22
 12 144 170

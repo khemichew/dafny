@@ -10,5 +10,3 @@ constructorCaseWithoutParentheses.dfy(17,20): Warning: Constructor name 'Blue' s
 constructorCaseWithoutParentheses.dfy(23,11): Warning: Constructor name 'Green' should be followed by parentheses
 constructorCaseWithoutParentheses.dfy(29,11): Warning: Constructor name 'Green' should be followed by parentheses
 constructorCaseWithoutParentheses.dfy(38,14): Warning: Constructor name 'Green' should be followed by parentheses
-
-Dafny program verifier finished with 5 verified, 0 errors

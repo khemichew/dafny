@@ -1,22 +1,14 @@
-
-Dafny program verifier finished with 0 verified, 0 errors
 Compiled assembly into CompileAndThenRun.dll
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to CompileAndThenRun.js
 Additional output written to CompileAndThenRun-js.dtr
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to CompileAndThenRun-go/src/CompileAndThenRun.go
 Additional output written to CompileAndThenRun-go/src/CompileAndThenRun-go.dtr
 Additional output written to CompileAndThenRun-go/src/dafny/dafny.go
 Additional output written to CompileAndThenRun-go/src/dafny/dafnyFromDafny.go
 Additional output written to CompileAndThenRun-go/src/System_/System_.go
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to CompileAndThenRun-java/CompileAndThenRun.java
 Additional output written to CompileAndThenRun-java/CompileAndThenRun-java.dtr
 Additional output written to CompileAndThenRun-java/dafny/Array.java
@@ -89,15 +81,11 @@ Additional output written to CompileAndThenRun-java/_System/nat.java
 Additional output written to CompileAndThenRun-java/_System/__default.java
 Wrote executable jar CompileAndThenRun.jar
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to CompileAndThenRun.cpp
 Additional output written to CompileAndThenRun-cpp.dtr
 Additional output written to CompileAndThenRun.h
 Additional output written to DafnyRuntime.h
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to CompileAndThenRun-py/__main__.py
 Additional output written to CompileAndThenRun-py/CompileAndThenRun-py.dtr
 Additional output written to CompileAndThenRun-py/System_.py

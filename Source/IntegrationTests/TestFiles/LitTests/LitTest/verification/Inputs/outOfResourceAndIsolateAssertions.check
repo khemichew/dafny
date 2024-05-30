@@ -22,5 +22,3 @@ CHECK: Verification part 8/9 of L, on line 12, verified successfully \(time: .*,
 CHECK: Verification part 9/9 of L, on line 12, ran out of resources
 outOfResourceAndIsolateAssertions.dfy\(10,18\): Error: Verification out of resource \(L\)
 outOfResourceAndIsolateAssertions.dfy\(12,18\): Error: Verification out of resource \(L\)
-
-Dafny program verifier finished with 18 verified, 0 errors, 2 out of resource

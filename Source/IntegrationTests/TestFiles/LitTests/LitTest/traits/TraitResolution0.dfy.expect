@@ -348,5 +348,3 @@ module P2 {
   type {:axiom} Cl(==)<Y> = c: Cl?<Y> | c != null /*special witness*/
   */
 }
-
-Dafny program verifier finished with 6 verified, 0 errors

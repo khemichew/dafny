@@ -33,5 +33,3 @@ TestAuditor.dfy(160,26): Warning: GenerateBytesWithAxiom: Declaration has explic
 TestAuditor.dfy(164,28): Warning: ExternFunctionWithAxiom: Declaration has explicit `{:axiom}` attribute. Possible mitigation: Provide a proof or test.
 TestAuditor.dfy(89,27): Warning: T: Trait method calls may not terminate (uses `{:termination false}`). Possible mitigation: Remove if possible.
 Dafny auditor completed with 22 findings
-
-Dafny program verifier did not attempt verification

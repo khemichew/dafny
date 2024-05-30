@@ -6,5 +6,3 @@ git-issue-4994.dfy(25,13): Error: assertion might not hold
 git-issue-4994.dfy(27,13): Error: assertion might not hold
 git-issue-4994.dfy(29,13): Error: assertion might not hold
 git-issue-4994.dfy(31,14): Error: assertion might not hold
-
-Dafny program verifier finished with 1 verified, 8 errors

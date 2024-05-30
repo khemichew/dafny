@@ -1,23 +1,15 @@
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to ManualCompile.cs
 Additional output written to ManualCompile-cs.dtr
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to ManualCompile.js
 Additional output written to ManualCompile-js.dtr
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to ManualCompile-go/src/ManualCompile.go
 Additional output written to ManualCompile-go/src/ManualCompile-go.dtr
 Additional output written to ManualCompile-go/src/dafny/dafny.go
 Additional output written to ManualCompile-go/src/dafny/dafnyFromDafny.go
 Additional output written to ManualCompile-go/src/System_/System_.go
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to ManualCompile-java/ManualCompile.java
 Additional output written to ManualCompile-java/ManualCompile-java.dtr
 Additional output written to ManualCompile-java/dafny/Array.java
@@ -89,15 +81,11 @@ Additional output written to ManualCompile-java/dafny/Tuple9.java
 Additional output written to ManualCompile-java/_System/nat.java
 Additional output written to ManualCompile-java/_System/__default.java
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to ManualCompile.cpp
 Additional output written to ManualCompile-cpp.dtr
 Additional output written to ManualCompile.h
 Additional output written to DafnyRuntime.h
 hello, Dafny
-
-Dafny program verifier finished with 0 verified, 0 errors
 Wrote textual form of target program to ManualCompile-py/__main__.py
 Additional output written to ManualCompile-py/ManualCompile-py.dtr
 Additional output written to ManualCompile-py/System_.py

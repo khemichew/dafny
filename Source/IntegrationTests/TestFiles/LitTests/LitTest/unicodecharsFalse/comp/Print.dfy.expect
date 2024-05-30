@@ -1,7 +1,3 @@
-
-Dafny program verifier finished with 2 verified, 0 errors
-
-Dafny program verifier did not attempt verification
 Strings in collections:
   [abc, def]
   [[abc, def]]
@@ -10,8 +6,6 @@ Strings in collections:
   []
   []
   [aaaaa]
-
-Dafny program verifier did not attempt verification
 Strings in collections:
   [abc, def]
   [[abc, def]]
@@ -20,8 +14,6 @@ Strings in collections:
   []
   []
   [aaaaa]
-
-Dafny program verifier did not attempt verification
 Strings in collections:
   [abc, def]
   [[abc, def]]
@@ -30,8 +22,6 @@ Strings in collections:
   []
   []
   [aaaaa]
-
-Dafny program verifier did not attempt verification
 Strings in collections:
   [abc, def]
   [[abc, def]]
