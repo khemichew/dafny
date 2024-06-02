@@ -366,6 +366,11 @@ public class MultiBackendTest {
       var libPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
       var runtimePath = Path.Join(libPath, "DafnyRuntime.dll");
       dafnyArgs = dafnyArgs.Concat(new[] { "--include-runtime:false", "--input", runtimePath });
+      try {
+        Directory.Delete(tempOutputDirectory, true);
+      } catch (Exception) {
+        // Don't crash the test due to failure of deletion of test artifacts
+      }
     }
 
     int exitCode;

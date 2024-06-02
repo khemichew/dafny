@@ -139,35 +139,24 @@ public abstract class ErrorReporter {
     Contract.Requires(tok != null);
     Contract.Requires(format != null);
     Contract.Requires(args != null);
-    if (!Options.SilenceWarnings) {
-      Warning(source, errorId, tok, String.Format(format, args));
-    }
+    Warning(source, errorId, tok, String.Format(format, args));
   }
 
   public void Warning(MessageSource source, Enum errorId, IToken tok, string msg) {
     Contract.Requires(tok != null);
     Contract.Requires(msg != null);
-    if (!Options.SilenceWarnings)
-    {
-      Message(source, ErrorLevel.Warning, errorId.ToString(), tok, msg);
-    }
+    Message(source, ErrorLevel.Warning, errorId.ToString(), tok, msg);
   }
 
   public void Warning(MessageSource source, string errorId, IToken tok, string msg) {
     Contract.Requires(tok != null);
     Contract.Requires(msg != null);
-    if (!Options.SilenceWarnings) {
-      Message(source, ErrorLevel.Warning, errorId, tok, msg);
-    }
+    Message(source, ErrorLevel.Warning, errorId, tok, msg);
   }
 
   public void Deprecated(MessageSource source, string errorId, IToken tok, string msg) {
     Contract.Requires(tok != null);
     Contract.Requires(msg != null);
-    if (Options.SilenceWarnings) {
-      return;
-    }
-    
     if (Options.DeprecationNoise != 0) {
       Warning(source, errorId, tok, msg);
     } else {
@@ -178,10 +167,6 @@ public abstract class ErrorReporter {
   public void Deprecated(MessageSource source, Enum errorId, IToken tok, string msg) {
     Contract.Requires(tok != null);
     Contract.Requires(msg != null);
-    if (Options.SilenceWarnings) {
-      return;
-    }
-
     if (Options.DeprecationNoise != 0) {
       Warning(source, errorId, tok, msg);
     } else {
@@ -193,10 +178,6 @@ public abstract class ErrorReporter {
     Contract.Requires(tok != null);
     Contract.Requires(format != null);
     Contract.Requires(args != null);
-    if (Options.SilenceWarnings) {
-      return;
-    }
-    
     if (Options.DeprecationNoise != 0) {
       Warning(source, errorId, tok, String.Format(format, args));
     }
@@ -205,18 +186,14 @@ public abstract class ErrorReporter {
   public void Info(MessageSource source, IToken tok, string msg, object errorId = null) {
     Contract.Requires(tok != null);
     Contract.Requires(msg != null);
-    if (!Options.SilenceWarnings) {
-      Message(source, ErrorLevel.Info, errorId?.ToString(), tok, msg);
-    }
+    Message(source, ErrorLevel.Info, errorId?.ToString(), tok, msg);
   }
 
   public void Info(MessageSource source, IToken tok, string msg, params object[] args) {
     Contract.Requires(tok != null);
     Contract.Requires(msg != null);
     Contract.Requires(args != null);
-    if (!Options.SilenceWarnings) {
-      Info(source, tok, String.Format(msg, args));
-    }
+    Info(source, tok, String.Format(msg, args));
   }
 
   public string ErrorToString(ErrorLevel header, IToken tok, string msg) {
