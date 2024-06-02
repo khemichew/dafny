@@ -581,7 +581,7 @@ NoGhost - disable printing of functions, ghost methods, and proof
       }
     );
     DooFile.RegisterNoChecksNeeded(WarnAsErrors, false);
-
+    DooFile.RegisterNoChecksNeeded(SilenceWarnings, false);
     DooFile.RegisterNoChecksNeeded(ProgressOption, false);
     DooFile.RegisterNoChecksNeeded(LogLocation, false);
     DooFile.RegisterNoChecksNeeded(LogLevelOption, false);
