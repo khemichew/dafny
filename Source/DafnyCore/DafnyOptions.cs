@@ -377,6 +377,7 @@ namespace Microsoft.Dafny {
     public bool DisableScopes = false;
     public bool UseStdin = false;
     public bool FailOnWarnings = false;
+    public bool SilenceWarnings = false;
     [CanBeNull] private TestGenerationOptions testGenOptions = null;
     public bool ExtractCounterexample = false;
 

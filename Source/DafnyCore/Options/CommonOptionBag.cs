@@ -262,6 +262,9 @@ true - Print debug information for the new type system.".TrimStart()) {
   public static readonly Option<bool> AllowWarnings = new("--allow-warnings",
     "Allow compilation to continue and succeed when warnings occur. Errors will still halt and fail compilation.");
 
+  public static readonly Option<bool> SilenceWarnings = new("--silence-warnings",
+    "Suppress all warning output. Errors will still halt and fail compilation.");
+
   public static readonly Option<bool> WarnMissingConstructorParenthesis = new("--warn-missing-constructor-parentheses",
     "Emits a warning when a constructor name in a case pattern is not followed by parentheses.");
   public static readonly Option<bool> WarnShadowing = new("--warn-shadowing",
@@ -366,6 +369,10 @@ If verification fails, report a detailed counterexample for the first failing as
         options.Set(AllowWarnings, true);
         options.FailOnWarnings = false;
       }
+    });
+
+    DafnyOptions.RegisterLegacyBinding(SilenceWarnings, (options, value) => {
+      options.SilenceWarnings = value;
     });
 
     DafnyOptions.RegisterLegacyUi(AllowAxioms, DafnyOptions.ParseBoolean, "Verification options", legacyName: "allowAxioms", defaultValue: true);
@@ -574,6 +581,7 @@ NoGhost - disable printing of functions, ghost methods, and proof
       }
     );
     DooFile.RegisterNoChecksNeeded(WarnAsErrors, false);
+
     DooFile.RegisterNoChecksNeeded(ProgressOption, false);
     DooFile.RegisterNoChecksNeeded(LogLocation, false);
     DooFile.RegisterNoChecksNeeded(LogLevelOption, false);
