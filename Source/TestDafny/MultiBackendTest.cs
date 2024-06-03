@@ -366,11 +366,6 @@ public class MultiBackendTest {
       var libPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
       var runtimePath = Path.Join(libPath, "DafnyRuntime.dll");
       dafnyArgs = dafnyArgs.Concat(new[] { "--include-runtime:false", "--input", runtimePath });
-      try {
-        Directory.Delete(tempOutputDirectory, true);
-      } catch (Exception) {
-        // Don't crash the test due to failure of deletion of test artifacts
-      }
     }
 
     int exitCode;
@@ -416,19 +411,47 @@ public class MultiBackendTest {
             }
           }
         }
+        
+        try {
+          Directory.Delete(tempOutputDirectory, true);
+        } catch (Exception) {
+          // Don't crash the test due to failure of deletion of test artifacts
+        }
+        
         return 0;
       }
-
+      
       await output.WriteLineAsync(diffMessage);
+      
+      try {
+        Directory.Delete(tempOutputDirectory, true);
+      } catch (Exception) {
+        // Don't crash the test due to failure of deletion of test artifacts
+      }
+      
       return 1;
     }
 
     // If we hit errors, check for known unsupported features or bugs for this compilation target
     if (error == "" && OnlyAllowedOutputLines(backend, outputString)) {
+      
+      try {
+        Directory.Delete(tempOutputDirectory, true);
+      } catch (Exception) {
+        // Don't crash the test due to failure of deletion of test artifacts
+      }
+      
       return 0;
     }
     // If we hit errors, check for known unsupported features or bugs for this compilation target
     if (outputString == "" && OnlyAllowedOutputLines(backend, error)) {
+      
+      try {
+        Directory.Delete(tempOutputDirectory, true);
+      } catch (Exception) {
+        // Don't crash the test due to failure of deletion of test artifacts
+      }
+      
       return 0;
     }
 
@@ -452,6 +475,12 @@ public class MultiBackendTest {
           }
         }
       }
+      
+      try {
+        Directory.Delete(tempOutputDirectory, true);
+      } catch (Exception) {
+        // Don't crash the test due to failure of deletion of test artifacts
+      }
 
       return checkResult;
     }
@@ -460,6 +489,12 @@ public class MultiBackendTest {
     await output.WriteLineAsync(outputString);
     await output.WriteLineAsync("Error:");
     await output.WriteLineAsync(error);
+    
+    try {
+      Directory.Delete(tempOutputDirectory, true);
+    } catch (Exception) {
+      // Don't crash the test due to failure of deletion of test artifacts
+    }
     return exitCode;
   }
 
